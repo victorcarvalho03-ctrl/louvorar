@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Escalas - Área Angra</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- TELA DE LOGIN -->
+    <div id="tela-login" class="container-login">
+        <h1>Acesso Restrito</h1>
+        <p>Área Angra dos Reis</p>
+        <input type="email" id="email" placeholder="E-mail">
+        <input type="password" id="senha" placeholder="Senha">
+        <button onclick="fazerLogin()">Entrar</button>
+        <p id="mensagem-erro" class="erro"></p>
+    </div>
+
+    <!-- PAINEL PRINCIPAL (Escondido até fazer login) -->
+    <div id="painel-principal" class="escondido">
+        <header class="topo-amarelo">
+            <h2>SISTEMA DE ESCALAS E ESTRUTURAS</h2>
+            <button onclick="fazerLogout()" class="btn-sair">Sair</button>
+        </header>
+
+        <nav class="menu-abas">
+            <button class="aba-ativa" onclick="mostrarAba('membros')">Gestão de Membros</button>
+            <button onclick="alert('Em breve!')">Eventos</button>
+            <button onclick="alert('Em breve!')">Montar Estrutura</button>
+        </nav>
+
+        <main id="conteudo-membros" class="conteudo">
+            <h3>Membros Cadastrados</h3>
+            <button class="btn-adicionar" onclick="alert('Em breve: Abrir modal de cadastro')">+ Adicionar Novo Membro</button>
+            
+            <table class="tabela-dados">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Grupo Local</th>
+                        <th>Funções</th>
+                        <th>Grupo de Área</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="corpo-tabela-membros">
+                    <!-- Os dados do Firebase vão aparecer aqui -->
+                    <tr>
+                        <td colspan="5" style="text-align:center;">Carregando dados...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </main>
+    </div>
+
+    <!-- Scripts do Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    
+    <!-- Seu script -->
+    <script src="app.js"></script>
+</body>
+</html>
+
+:root {
+    --amarelo-topo: #FFFF00;
+    --verde-soprano: #A9C47F; /* Verde escuro */
+    --verde-claro: #C6E0B4;
+    --azul-base: #B8CCE4;
+    --azul-cordas: #9BC2E6;
+    --vermelho-regencia: #FF0000;
+    --cinza-fundo: #f4f4f4;
+}
+
+* {
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    margin: 0;
+    background-color: var(--cinza-fundo);
+}
+
+/* Tela de Login */
+.container-login {
+    max-width: 300px;
+    margin: 100px auto;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.container-login input {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.container-login button {
+    width: 100%;
+    padding: 10px;
+    background-color: #333;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.erro { color: red; font-size: 12px; margin-top: 10px; }
+
+/* Painel Principal */
+.escondido { display: none !important; }
+
+.topo-amarelo {
+    background-color: var(--amarelo-topo);
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid black;
+}
+
+.topo-amarelo h2 { margin: 0; font-size: 18px; }
+
+.btn-sair {
+    background: #333;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.menu-abas {
+    display: flex;
+    background: #333;
+    padding: 0 20px;
+}
+
+.menu-abas button {
+    background: none;
+    border: none;
+    color: white;
+    padding: 15px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.menu-abas button.aba-ativa {
+    background: var(--cinza-fundo);
+    color: #333;
+    font-weight: bold;
+    border-top: 3px solid var(--vermelho-regencia);
+}
+
+.conteudo { padding: 20px; }
+
+.btn-adicionar {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 15px;
+}
+
+/* Tabela */
+.tabela-dados {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+.tabela-dados th, .tabela-dados td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: left;
+    font-size: 14px;
+}
+
+.tabela-dados th {
+    background-color: var(--azul-base);
+}
+
+// 1. COLOQUE SUAS CHAVES DO FIREBASE AQUI
+const firebaseConfig = {
+  apiKey: "AIzaSyBctoENUqGBMTBVIuAEOr-zyMCK4-fLi5U",
+  authDomain: "louvor-angra-dos-reis.firebaseapp.com",
+  projectId: "louvor-angra-dos-reis",
+  storageBucket: "louvor-angra-dos-reis.firebasestorage.app",
+  messagingSenderId: "613690121412",
+  appId: "1:613690121412:web:be62972614043421723d91"
+};
+
+// Inicializa o Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// 2. LÓGICA DE LOGIN
+function fazerLogin() {
+    const email = document.getElementById('email').value;
+    const senha = document.getElementById('senha').value;
+    const msgErro = document.getElementById('mensagem-erro');
+
+    auth.signInWithEmailAndPassword(email, senha)
+        .then((userCredential) => {
+            // Login bem-sucedido
+            msgErro.innerText = "";
+            document.getElementById('tela-login').classList.add('escondido');
+            document.getElementById('painel-principal').classList.remove('escondido');
+            carregarMembros(); // Chama a função para buscar os dados
+        })
+        .catch((error) => {
+            msgErro.innerText = "Erro: " + error.message;
+        });
+}
+
+function fazerLogout() {
+    auth.signOut().then(() => {
+        document.getElementById('painel-principal').classList.add('escondido');
+        document.getElementById('tela-login').classList.remove('escondido');
+        document.getElementById('email').value = "";
+        document.getElementById('senha').value = "";
+    });
+}
+
+// Monitora o estado de autenticação (se der F5, ele não desloga)
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        document.getElementById('tela-login').classList.add('escondido');
+        document.getElementById('painel-principal').classList.remove('escondido');
+        carregarMembros();
+    } else {
+        document.getElementById('tela-login').classList.remove('escondido');
+        document.getElementById('painel-principal').classList.add('escondido');
+    }
+});
+
+// 3. LÓGICA DE BUSCAR MEMBROS NO BANCO (Ainda vamos popular isso)
+function carregarMembros() {
+    const tabela = document.getElementById('corpo-tabela-membros');
+    
+    // Vamos buscar na coleção "membros"
+    db.collection('membros').get().then((querySnapshot) => {
+        tabela.innerHTML = ""; // Limpa a tabela
+
+        if (querySnapshot.empty) {
+            tabela.innerHTML = "<tr><td colspan='5' style='text-align:center;'>Nenhum membro cadastrado ainda.</td></tr>";
+            return;
+        }
+
+        querySnapshot.forEach((doc) => {
+            const membro = doc.data();
+            const tr = document.createElement('tr');
+            
+            // Transforma o array de funções em texto (ex: "Soprano, Teclado")
+            const funcoes = membro.funcoes ? membro.funcoes.join(', ') : '';
+            const isArea = membro.ehGrupoArea ? "Sim" : "Não";
+
+            tr.innerHTML = `
+                <td>${membro.nome}</td>
+                <td>${membro.grupoLocal}</td>
+                <td>${funcoes}</td>
+                <td>${isArea}</td>
+                <td>
+                    <button onclick="alert('Editar em breve')">✏️</button>
+                    <button onclick="alert('Excluir em breve')">🗑️</button>
+                </td>
+            `;
+            tabela.appendChild(tr);
+        });
+    }).catch((error) => {
+        console.error("Erro ao buscar membros: ", error);
+        tabela.innerHTML = "<tr><td colspan='5' style='color:red;'>Erro ao carregar os dados do banco.</td></tr>";
+    });
+}
+
+// 1. COLOQUE SUAS CHAVES DO FIREBASE AQUI
+const firebaseConfig = {
+  apiKey: "SUA_API_KEY",
+  authDomain: "SEU_PROJETO.firebaseapp.com",
+  projectId: "SEU_PROJETO",
+  storageBucket: "SEU_PROJETO.appspot.com",
+  messagingSenderId: "SEU_ID",
+  appId: "SEU_APP_ID"
+};
+
+// Inicializa o Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// 2. LÓGICA DE LOGIN
+function fazerLogin() {
+    const email = document.getElementById('email').value;
+    const senha = document.getElementById('senha').value;
+    const msgErro = document.getElementById('mensagem-erro');
+
+    auth.signInWithEmailAndPassword(email, senha)
+        .then((userCredential) => {
+            // Login bem-sucedido
+            msgErro.innerText = "";
+            document.getElementById('tela-login').classList.add('escondido');
+            document.getElementById('painel-principal').classList.remove('escondido');
+            carregarMembros(); // Chama a função para buscar os dados
+        })
+        .catch((error) => {
+            msgErro.innerText = "Erro: " + error.message;
+        });
+}
+
+function fazerLogout() {
+    auth.signOut().then(() => {
+        document.getElementById('painel-principal').classList.add('escondido');
+        document.getElementById('tela-login').classList.remove('escondido');
+        document.getElementById('email').value = "";
+        document.getElementById('senha').value = "";
+    });
+}
+
+// Monitora o estado de autenticação (se der F5, ele não desloga)
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        document.getElementById('tela-login').classList.add('escondido');
+        document.getElementById('painel-principal').classList.remove('escondido');
+        carregarMembros();
+    } else {
+        document.getElementById('tela-login').classList.remove('escondido');
+        document.getElementById('painel-principal').classList.add('escondido');
+    }
+});
+
+// 3. LÓGICA DE BUSCAR MEMBROS NO BANCO (Ainda vamos popular isso)
+function carregarMembros() {
+    const tabela = document.getElementById('corpo-tabela-membros');
+    
+    // Vamos buscar na coleção "membros"
+    db.collection('membros').get().then((querySnapshot) => {
+        tabela.innerHTML = ""; // Limpa a tabela
+
+        if (querySnapshot.empty) {
+            tabela.innerHTML = "<tr><td colspan='5' style='text-align:center;'>Nenhum membro cadastrado ainda.</td></tr>";
+            return;
+        }
+
+        querySnapshot.forEach((doc) => {
+            const membro = doc.data();
+            const tr = document.createElement('tr');
+            
+            // Transforma o array de funções em texto (ex: "Soprano, Teclado")
+            const funcoes = membro.funcoes ? membro.funcoes.join(', ') : '';
+            const isArea = membro.ehGrupoArea ? "Sim" : "Não";
+
+            tr.innerHTML = `
+                <td>${membro.nome}</td>
+                <td>${membro.grupoLocal}</td>
+                <td>${funcoes}</td>
+                <td>${isArea}</td>
+                <td>
+                    <button onclick="alert('Editar em breve')">✏️</button>
+                    <button onclick="alert('Excluir em breve')">🗑️</button>
+                </td>
+            `;
+            tabela.appendChild(tr);
+        });
+    }).catch((error) => {
+        console.error("Erro ao buscar membros: ", error);
+        tabela.innerHTML = "<tr><td colspan='5' style='color:red;'>Erro ao carregar os dados do banco.</td></tr>";
+    });
+}
