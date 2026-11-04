@@ -1,0 +1,125 @@
+:root {
+    --amarelo-topo: #FFFF00;
+    --verde-soprano: #A9C47F; /* Verde escuro */
+    --verde-claro: #C6E0B4;
+    --azul-base: #B8CCE4;
+    --azul-cordas: #9BC2E6;
+    --vermelho-regencia: #FF0000;
+    --cinza-fundo: #f4f4f4;
+}
+
+* {
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    margin: 0;
+    background-color: var(--cinza-fundo);
+}
+
+/* Tela de Login */
+.container-login {
+    max-width: 300px;
+    margin: 100px auto;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.container-login input {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.container-login button {
+    width: 100%;
+    padding: 10px;
+    background-color: #333;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.erro { color: red; font-size: 12px; margin-top: 10px; }
+
+/* Painel Principal */
+.escondido { display: none !important; }
+
+.topo-amarelo {
+    background-color: var(--amarelo-topo);
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid black;
+}
+
+.topo-amarelo h2 { margin: 0; font-size: 18px; }
+
+.btn-sair {
+    background: #333;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.menu-abas {
+    display: flex;
+    background: #333;
+    padding: 0 20px;
+}
+
+.menu-abas button {
+    background: none;
+    border: none;
+    color: white;
+    padding: 15px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.menu-abas button.aba-ativa {
+    background: var(--cinza-fundo);
+    color: #333;
+    font-weight: bold;
+    border-top: 3px solid var(--vermelho-regencia);
+}
+
+.conteudo { padding: 20px; }
+
+.btn-adicionar {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 15px;
+}
+
+/* Tabela */
+.tabela-dados {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+.tabela-dados th, .tabela-dados td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: left;
+    font-size: 14px;
+}
+
+.tabela-dados th {
+    background-color: var(--azul-base);
+}
