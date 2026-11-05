@@ -18,7 +18,7 @@
         <p id="mensagem-erro" class="erro"></p>
     </div>
 
-    <!-- PAINEL PRINCIPAL (Escondido até fazer login) -->
+    <!-- PAINEL PRINCIPAL -->
     <div id="painel-principal" class="escondido">
         <header class="topo-amarelo">
             <h2>SISTEMA DE ESCALAS E ESTRUTURAS</h2>
@@ -32,35 +32,42 @@
         </nav>
 
         <main id="conteudo-membros" class="conteudo">
-            <h3>Membros Cadastrados</h3>
-            <!-- O botão deve ficar AQUI, apenas uma vez -->
-            <button class="btn-adicionar" onclick="abrirModal()">+ Adicionar Novo Membro</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <h3>Membros Cadastrados</h3>
+                <!-- O botão só aparece se o JS autorizar -->
+                <button id="btn-add-membro" class="btn-adicionar" onclick="abrirModal()" style="display: none;">+ Adicionar Membro</button>
+            </div>
+
+            <!-- SUB-ABAS -->
+            <div class="sub-abas">
+                <button id="sub-aba-locais" class="btn-sub-aba ativa" onclick="mudarSubAba('locais')">Grupos Locais</button>
+                <button id="sub-aba-area" class="btn-sub-aba" onclick="mudarSubAba('area')">Grupo de Área</button>
+            </div>
             
-            <table class="tabela-dados">
-                <thead>
-                    <tr>
-                        <th>Nome</th>
-                        <th>Grupo Local</th>
-                        <th>Funções</th>
-                        <th>Grupo de Área</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="corpo-tabela-membros">
-                    <!-- Os dados do Firebase vão aparecer aqui -->
-                    <tr>
-                        <td colspan="5" style="text-align:center;">Carregando dados...</td>
-                    </tr>
-                </tbody>
-            </table>
+            <!-- Tabela com rolagem lateral para celular -->
+            <div class="tabela-responsiva">
+                <table class="tabela-dados">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Grupo Local</th>
+                            <th>Funções</th>
+                            <th>Grupo de Área</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="corpo-tabela-membros">
+                        <tr><td colspan="5" style="text-align:center;">Carregando dados...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </main>
     </div>
 
-    <!-- MODAL DE CADASTRO DE MEMBRO (Fica fora do painel principal) -->
+    <!-- MODAL DE CADASTRO/EDIÇÃO -->
     <div id="modal-membro" class="modal-fundo escondido">
-        <h3 id="titulo-modal-membro">Cadastrar Novo Membro</h3>
         <div class="modal-conteudo">
-            <h3>Cadastrar Novo Membro</h3>
+            <h3 id="titulo-modal-membro">Cadastrar Novo Membro</h3>
             
             <label>Nome Completo:</label>
             <input type="text" id="membro-nome" placeholder="Ex: Ana Maria">
@@ -96,7 +103,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
-    <!-- Seu script -->
     <script src="app.js"></script>
 </body>
 </html>
