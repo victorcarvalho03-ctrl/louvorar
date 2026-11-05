@@ -1,4 +1,4 @@
-// 1. COLOQUE SUAS CHAVES DO FIREBASE AQUI
+// 1. COLOQUE SUAS CHAVES REAIS DO FIREBASE AQUI
 const firebaseConfig = {
   apiKey: "AIzaSyBctoENUqGBMTBVIuAEOr-zyMCK4-fLi5U",
   authDomain: "louvor-angra-dos-reis.firebaseapp.com",
@@ -8,15 +8,17 @@ const firebaseConfig = {
   appId: "1:613690121412:web:be62972614043421723d91"
 };
 
-// Inicializa o Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Variável global para saber se estamos criando ou editando
+// Variáveis de Controle
 let idMembroEditando = null;
+let meuNivelAcesso = "visitante";
+let meuGrupoLocal = "nenhum";
+let abaMembrosAtual = "locais"; // Pode ser 'locais' ou 'area'
 
-// 2. LÓGICA DE LOGIN
+// 2. LÓGICA DE LOGIN E PERMISSÕES
 function fazerLogin() {
     const email = document.getElementById('email').value;
     const senha = document.getElementById('senha').value;
@@ -25,13 +27,33 @@ function fazerLogin() {
     auth.signInWithEmailAndPassword(email, senha)
         .then((userCredential) => {
             msgErro.innerText = "";
-            document.getElementById('tela-login').classList.add('escondido');
-            document.getElementById('painel-principal').classList.remove('escondido');
-            carregarMembros(); 
+            verificarPermissoes(userCredential.user.email);
         })
         .catch((error) => {
             msgErro.innerText = "Erro: " + error.message;
         });
+}
+
+function verificarPermissoes(emailLogado) {
+    // Busca o e-mail na coleção 'usuarios' para ver quem é
+    db.collection('usuarios').doc(emailLogado).get().then((doc) => {
+        if (doc.exists) {
+            const dados = doc.data();
+            meuNivelAcesso = dados.nivel; // 'admin' ou 'lider'
+            meuGrupoLocal = dados.grupoLocal; 
+            
+            // Mostra o botão de adicionar membro se for admin ou lider
+            document.getElementById('btn-add-membro').style.display = "block";
+        } else {
+            // Se não achar o usuário no banco, é visitante (só leitura)
+            meuNivelAcesso = "visitante";
+        }
+
+        // Libera a tela
+        document.getElementById('tela-login').classList.add('escondido');
+        document.getElementById('painel-principal').classList.remove('escondido');
+        carregarMembros();
+    });
 }
 
 function fazerLogout() {
@@ -40,69 +62,94 @@ function fazerLogout() {
         document.getElementById('tela-login').classList.remove('escondido');
         document.getElementById('email').value = "";
         document.getElementById('senha').value = "";
+        meuNivelAcesso = "visitante";
     });
 }
 
-// Monitora o estado de autenticação
 auth.onAuthStateChanged((user) => {
     if (user) {
-        document.getElementById('tela-login').classList.add('escondido');
-        document.getElementById('painel-principal').classList.remove('escondido');
-        carregarMembros();
+        verificarPermissoes(user.email);
     } else {
         document.getElementById('tela-login').classList.remove('escondido');
         document.getElementById('painel-principal').classList.add('escondido');
     }
 });
 
-// 3. LÓGICA DE BUSCAR E MOSTRAR MEMBROS
+// 3. LÓGICA DAS SUB-ABAS (Locais vs Área)
+function mudarSubAba(aba) {
+    abaMembrosAtual = aba;
+    
+    // Atualiza visual dos botões
+    document.getElementById('sub-aba-locais').classList.remove('ativa');
+    document.getElementById('sub-aba-area').classList.remove('ativa');
+    
+    if (aba === 'locais') {
+        document.getElementById('sub-aba-locais').classList.add('ativa');
+    } else {
+        document.getElementById('sub-aba-area').classList.add('ativa');
+    }
+    
+    carregarMembros(); // Recarrega a tabela filtrada
+}
+
+// 4. BUSCAR E RENDERIZAR MEMBROS
 function carregarMembros() {
     const tabela = document.getElementById('corpo-tabela-membros');
+    tabela.innerHTML = "<tr><td colspan='5' style='text-align:center;'>Buscando dados...</td></tr>";
     
     db.collection('membros').get().then((querySnapshot) => {
         tabela.innerHTML = ""; 
-
-        if (querySnapshot.empty) {
-            tabela.innerHTML = "<tr><td colspan='5' style='text-align:center;'>Nenhum membro cadastrado ainda.</td></tr>";
-            return;
-        }
+        let contador = 0;
 
         querySnapshot.forEach((doc) => {
             const membro = doc.data();
-            const tr = document.createElement('tr');
             
+            // Filtro das Abas: Se for 'area' e o membro não for da área, pula.
+            if (abaMembrosAtual === 'area' && !membro.ehGrupoArea) return;
+
+            contador++;
+            const tr = document.createElement('tr');
             const funcoes = membro.funcoes ? membro.funcoes.join(', ') : '';
             const isArea = membro.ehGrupoArea ? "Sim" : "Não";
 
-            // Adicionamos os botões com as funções de editar e excluir passando o ID do documento
+            // LÓGICA DE PERMISSÃO: Quem pode editar esse membro?
+            let botoesAcao = "";
+            if (meuNivelAcesso === 'admin' || (meuNivelAcesso === 'lider' && meuGrupoLocal === membro.grupoLocal)) {
+                botoesAcao = `
+                    <button onclick="prepararEdicao('${doc.id}')" style="cursor:pointer; border:none; background:none; font-size:16px;">✏️</button>
+                    <button onclick="excluirMembro('${doc.id}', '${membro.nome}')" style="cursor:pointer; border:none; background:none; font-size:16px;">🗑️</button>
+                `;
+            } else {
+                botoesAcao = `<span style="font-size:12px; color:#888;">Sem permissão</span>`;
+            }
+
             tr.innerHTML = `
                 <td>${membro.nome}</td>
                 <td>${membro.grupoLocal}</td>
                 <td>${funcoes}</td>
                 <td>${isArea}</td>
-                <td style="white-space: nowrap;">
-                    <button onclick="prepararEdicao('${doc.id}')" style="cursor:pointer; border:none; background:none; font-size:16px;">✏️</button>
-                    <button onclick="excluirMembro('${doc.id}', '${membro.nome}')" style="cursor:pointer; border:none; background:none; font-size:16px;">🗑️</button>
-                </td>
+                <td style="white-space: nowrap;">${botoesAcao}</td>
             `;
             tabela.appendChild(tr);
         });
+
+        if (contador === 0) {
+            tabela.innerHTML = "<tr><td colspan='5' style='text-align:center;'>Nenhum membro encontrado nesta aba.</td></tr>";
+        }
+
     }).catch((error) => {
         console.error("Erro ao buscar membros: ", error);
-        tabela.innerHTML = "<tr><td colspan='5' style='color:red;'>Erro ao carregar os dados do banco.</td></tr>";
+        tabela.innerHTML = "<tr><td colspan='5' style='color:red; text-align:center;'>Erro ao carregar os dados.</td></tr>";
     });
 }
 
-// 4. LÓGICA DO MODAL (CRIAR E EDITAR)
+// 5. LÓGICA DO MODAL (CRIAR E EDITAR)
 function abrirModal() {
-    idMembroEditando = null; // Reseta a variável (modo criação)
+    idMembroEditando = null;
     document.getElementById('titulo-modal-membro').innerText = "Cadastrar Novo Membro";
-    
-    // Limpa os campos
     document.getElementById('membro-nome').value = "";
     document.getElementById('membro-funcoes').value = "";
     document.getElementById('membro-area').checked = false;
-    
     document.getElementById('modal-membro').classList.remove('escondido');
 }
 
@@ -116,75 +163,41 @@ function salvarMembro() {
     const funcoesTexto = document.getElementById('membro-funcoes').value;
     const ehGrupoArea = document.getElementById('membro-area').checked;
 
-    if (!nome || !funcoesTexto) {
-        alert("Por favor, preencha o nome e as funções.");
-        return;
-    }
+    if (!nome || !funcoesTexto) { alert("Preencha nome e funções."); return; }
 
     const funcoesArray = funcoesTexto.split(',').map(f => f.trim());
-
-    const dadosMembro = {
-        nome: nome,
-        grupoLocal: grupoLocal,
-        funcoes: funcoesArray,
-        ehGrupoArea: ehGrupoArea
-    };
+    const dadosMembro = { nome, grupoLocal, funcoes: funcoesArray, ehGrupoArea };
 
     if (idMembroEditando) {
-        // Se tem ID, estamos EDITANDO
-        db.collection('membros').doc(idMembroEditando).update(dadosMembro)
-        .then(() => {
-            alert("Membro atualizado com sucesso!");
-            fecharModal();
-            carregarMembros();
-        }).catch((error) => {
-            console.error("Erro ao atualizar: ", error);
-        });
+        db.collection('membros').doc(idMembroEditando).update(dadosMembro).then(() => {
+            alert("Membro atualizado!"); fecharModal(); carregarMembros();
+        }).catch((error) => console.error("Erro ao atualizar: ", error));
     } else {
-        // Se não tem ID, estamos CRIANDO
-        db.collection('membros').add(dadosMembro)
-        .then(() => {
-            alert("Membro cadastrado com sucesso!");
-            fecharModal();
-            carregarMembros();
-        }).catch((error) => {
-            console.error("Erro ao cadastrar: ", error);
-        });
+        db.collection('membros').add(dadosMembro).then(() => {
+            alert("Membro cadastrado!"); fecharModal(); carregarMembros();
+        }).catch((error) => console.error("Erro ao cadastrar: ", error));
     }
 }
 
-// 5. LÓGICA DE EDITAR E EXCLUIR
 function prepararEdicao(id) {
-    idMembroEditando = id; // Guarda o ID
-    
-    // Busca os dados no banco para preencher o modal
+    idMembroEditando = id;
     db.collection('membros').doc(id).get().then((doc) => {
         if (doc.exists) {
             const membro = doc.data();
-            
-            // Muda o título do modal
             document.getElementById('titulo-modal-membro').innerText = "Editar Membro";
-            
-            // Preenche os campos
             document.getElementById('membro-nome').value = membro.nome;
             document.getElementById('membro-grupo').value = membro.grupoLocal;
             document.getElementById('membro-funcoes').value = membro.funcoes ? membro.funcoes.join(', ') : '';
             document.getElementById('membro-area').checked = membro.ehGrupoArea;
-            
-            // Abre o modal
             document.getElementById('modal-membro').classList.remove('escondido');
         }
     });
 }
 
 function excluirMembro(id, nome) {
-    // Confirmação de segurança
-    if (confirm(`Tem certeza que deseja excluir ${nome}? Essa ação não pode ser desfeita.`)) {
+    if (confirm(`Excluir ${nome}? Essa ação não pode ser desfeita.`)) {
         db.collection('membros').doc(id).delete().then(() => {
-            alert("Membro excluído com sucesso.");
-            carregarMembros(); // Atualiza a tabela
-        }).catch((error) => {
-            console.error("Erro ao excluir: ", error);
-        });
+            alert("Excluído!"); carregarMembros();
+        }).catch((error) => console.error("Erro ao excluir: ", error));
     }
 }
