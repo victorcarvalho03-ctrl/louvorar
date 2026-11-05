@@ -1,11 +1,11 @@
 // 1. COLOQUE SUAS CHAVES DO FIREBASE AQUI
 const firebaseConfig = {
-  apiKey: "SUA_API_KEY",
-  authDomain: "SEU_PROJETO.firebaseapp.com",
-  projectId: "SEU_PROJETO",
-  storageBucket: "SEU_PROJETO.appspot.com",
-  messagingSenderId: "SEU_ID",
-  appId: "SEU_APP_ID"
+  apiKey: "AIzaSyBctoENUqGBMTBVIuAEOr-zyMCK4-fLi5U",
+  authDomain: "louvor-angra-dos-reis.firebaseapp.com",
+  projectId: "louvor-angra-dos-reis",
+  storageBucket: "louvor-angra-dos-reis.firebasestorage.app",
+  messagingSenderId: "613690121412",
+  appId: "1:613690121412:web:be62972614043421723d91"
 };
 
 // Inicializa o Firebase
