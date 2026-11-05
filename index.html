@@ -54,7 +54,40 @@
             </table>
         </main>
     </div>
+    <button class="btn-adicionar" onclick="abrirModal()">+ Adicionar Novo Membro</button>
+<!-- MODAL DE CADASTRO DE MEMBRO -->
+<div id="modal-membro" class="modal-fundo escondido">
+    <div class="modal-conteudo">
+        <h3>Cadastrar Novo Membro</h3>
+        
+        <label>Nome Completo:</label>
+        <input type="text" id="membro-nome" placeholder="Ex: Ana Maria">
 
+        <label>Grupo Local:</label>
+        <select id="membro-grupo">
+            <option value="Frade">Frade</option>
+            <option value="Perequê">Perequê</option>
+            <option value="Campo da Gringa">Campo da Gringa</option>
+            <option value="Itinga">Itinga</option>
+            <option value="Nova Angra">Nova Angra</option>
+            <option value="Jacuecanga">Jacuecanga</option>
+            <option value="Lídice">Lídice</option>
+        </select>
+
+        <label>Funções (Voz/Instrumento):</label>
+        <input type="text" id="membro-funcoes" placeholder="Ex: Soprano, Teclado (separe por vírgula)">
+
+        <label style="display: flex; align-items: center; gap: 10px; margin-top: 15px;">
+            <input type="checkbox" id="membro-area" style="width: auto;"> 
+            Faz parte do Grupo de Área?
+        </label>
+
+        <div class="modal-botoes">
+            <button class="btn-cancelar" onclick="fecharModal()">Cancelar</button>
+            <button class="btn-salvar" onclick="salvarMembro()">Salvar</button>
+        </div>
+    </div>
+</div>
     <!-- Scripts do Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
