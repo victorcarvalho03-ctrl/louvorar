@@ -91,3 +91,47 @@ function carregarMembros() {
         tabela.innerHTML = "<tr><td colspan='5' style='color:red;'>Erro ao carregar os dados do banco.</td></tr>";
     });
 }
+// 4. LÓGICA DO MODAL DE CADASTRO
+function abrirModal() {
+    document.getElementById('modal-membro').classList.remove('escondido');
+}
+
+function fecharModal() {
+    document.getElementById('modal-membro').classList.add('escondido');
+    // Limpa os campos após fechar
+    document.getElementById('membro-nome').value = "";
+    document.getElementById('membro-funcoes').value = "";
+    document.getElementById('membro-area').checked = false;
+}
+
+function salvarMembro() {
+    const nome = document.getElementById('membro-nome').value;
+    const grupoLocal = document.getElementById('membro-grupo').value;
+    const funcoesTexto = document.getElementById('membro-funcoes').value;
+    const ehGrupoArea = document.getElementById('membro-area').checked;
+
+    if (!nome || !funcoesTexto) {
+        alert("Por favor, preencha o nome e as funções.");
+        return;
+    }
+
+    // Transforma "Soprano, Teclado" em um array ["Soprano", "Teclado"]
+    const funcoesArray = funcoesTexto.split(',').map(f => f.trim());
+
+    // Salva no Firebase
+    db.collection('membros').add({
+        nome: nome,
+        grupoLocal: grupoLocal,
+        funcoes: funcoesArray,
+        ehGrupoArea: ehGrupoArea
+    })
+    .then(() => {
+        alert("Membro cadastrado com sucesso!");
+        fecharModal();
+        carregarMembros(); // Atualiza a tabela na tela
+    })
+    .catch((error) => {
+        console.error("Erro ao cadastrar: ", error);
+        alert("Erro ao cadastrar. Verifique o console.");
+    });
+}
