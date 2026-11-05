@@ -1,17 +1,20 @@
 // 1. COLOQUE SUAS CHAVES DO FIREBASE AQUI
 const firebaseConfig = {
-  apiKey: "AIzaSyBctoENUqGBMTBVIuAEOr-zyMCK4-fLi5U",
-  authDomain: "louvor-angra-dos-reis.firebaseapp.com",
-  projectId: "louvor-angra-dos-reis",
-  storageBucket: "louvor-angra-dos-reis.firebasestorage.app",
-  messagingSenderId: "613690121412",
-  appId: "1:613690121412:web:be62972614043421723d91"
+  apiKey: "SUA_API_KEY",
+  authDomain: "SEU_PROJETO.firebaseapp.com",
+  projectId: "SEU_PROJETO",
+  storageBucket: "SEU_PROJETO.appspot.com",
+  messagingSenderId: "SEU_ID",
+  appId: "SEU_APP_ID"
 };
 
 // Inicializa o Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+
+// Variável global para saber se estamos criando ou editando
+let idMembroEditando = null;
 
 // 2. LÓGICA DE LOGIN
 function fazerLogin() {
@@ -21,11 +24,10 @@ function fazerLogin() {
 
     auth.signInWithEmailAndPassword(email, senha)
         .then((userCredential) => {
-            // Login bem-sucedido
             msgErro.innerText = "";
             document.getElementById('tela-login').classList.add('escondido');
             document.getElementById('painel-principal').classList.remove('escondido');
-            carregarMembros(); // Chama a função para buscar os dados
+            carregarMembros(); 
         })
         .catch((error) => {
             msgErro.innerText = "Erro: " + error.message;
@@ -41,7 +43,7 @@ function fazerLogout() {
     });
 }
 
-// Monitora o estado de autenticação (se der F5, ele não desloga)
+// Monitora o estado de autenticação
 auth.onAuthStateChanged((user) => {
     if (user) {
         document.getElementById('tela-login').classList.add('escondido');
@@ -53,13 +55,12 @@ auth.onAuthStateChanged((user) => {
     }
 });
 
-// 3. LÓGICA DE BUSCAR MEMBROS NO BANCO (Ainda vamos popular isso)
+// 3. LÓGICA DE BUSCAR E MOSTRAR MEMBROS
 function carregarMembros() {
     const tabela = document.getElementById('corpo-tabela-membros');
     
-    // Vamos buscar na coleção "membros"
     db.collection('membros').get().then((querySnapshot) => {
-        tabela.innerHTML = ""; // Limpa a tabela
+        tabela.innerHTML = ""; 
 
         if (querySnapshot.empty) {
             tabela.innerHTML = "<tr><td colspan='5' style='text-align:center;'>Nenhum membro cadastrado ainda.</td></tr>";
@@ -70,18 +71,18 @@ function carregarMembros() {
             const membro = doc.data();
             const tr = document.createElement('tr');
             
-            // Transforma o array de funções em texto (ex: "Soprano, Teclado")
             const funcoes = membro.funcoes ? membro.funcoes.join(', ') : '';
             const isArea = membro.ehGrupoArea ? "Sim" : "Não";
 
+            // Adicionamos os botões com as funções de editar e excluir passando o ID do documento
             tr.innerHTML = `
                 <td>${membro.nome}</td>
                 <td>${membro.grupoLocal}</td>
                 <td>${funcoes}</td>
                 <td>${isArea}</td>
-                <td>
-                    <button onclick="alert('Editar em breve')">✏️</button>
-                    <button onclick="alert('Excluir em breve')">🗑️</button>
+                <td style="white-space: nowrap;">
+                    <button onclick="prepararEdicao('${doc.id}')" style="cursor:pointer; border:none; background:none; font-size:16px;">✏️</button>
+                    <button onclick="excluirMembro('${doc.id}', '${membro.nome}')" style="cursor:pointer; border:none; background:none; font-size:16px;">🗑️</button>
                 </td>
             `;
             tabela.appendChild(tr);
@@ -91,17 +92,22 @@ function carregarMembros() {
         tabela.innerHTML = "<tr><td colspan='5' style='color:red;'>Erro ao carregar os dados do banco.</td></tr>";
     });
 }
-// 4. LÓGICA DO MODAL DE CADASTRO
+
+// 4. LÓGICA DO MODAL (CRIAR E EDITAR)
 function abrirModal() {
+    idMembroEditando = null; // Reseta a variável (modo criação)
+    document.getElementById('titulo-modal-membro').innerText = "Cadastrar Novo Membro";
+    
+    // Limpa os campos
+    document.getElementById('membro-nome').value = "";
+    document.getElementById('membro-funcoes').value = "";
+    document.getElementById('membro-area').checked = false;
+    
     document.getElementById('modal-membro').classList.remove('escondido');
 }
 
 function fecharModal() {
     document.getElementById('modal-membro').classList.add('escondido');
-    // Limpa os campos após fechar
-    document.getElementById('membro-nome').value = "";
-    document.getElementById('membro-funcoes').value = "";
-    document.getElementById('membro-area').checked = false;
 }
 
 function salvarMembro() {
@@ -115,23 +121,70 @@ function salvarMembro() {
         return;
     }
 
-    // Transforma "Soprano, Teclado" em um array ["Soprano", "Teclado"]
     const funcoesArray = funcoesTexto.split(',').map(f => f.trim());
 
-    // Salva no Firebase
-    db.collection('membros').add({
+    const dadosMembro = {
         nome: nome,
         grupoLocal: grupoLocal,
         funcoes: funcoesArray,
         ehGrupoArea: ehGrupoArea
-    })
-    .then(() => {
-        alert("Membro cadastrado com sucesso!");
-        fecharModal();
-        carregarMembros(); // Atualiza a tabela na tela
-    })
-    .catch((error) => {
-        console.error("Erro ao cadastrar: ", error);
-        alert("Erro ao cadastrar. Verifique o console.");
+    };
+
+    if (idMembroEditando) {
+        // Se tem ID, estamos EDITANDO
+        db.collection('membros').doc(idMembroEditando).update(dadosMembro)
+        .then(() => {
+            alert("Membro atualizado com sucesso!");
+            fecharModal();
+            carregarMembros();
+        }).catch((error) => {
+            console.error("Erro ao atualizar: ", error);
+        });
+    } else {
+        // Se não tem ID, estamos CRIANDO
+        db.collection('membros').add(dadosMembro)
+        .then(() => {
+            alert("Membro cadastrado com sucesso!");
+            fecharModal();
+            carregarMembros();
+        }).catch((error) => {
+            console.error("Erro ao cadastrar: ", error);
+        });
+    }
+}
+
+// 5. LÓGICA DE EDITAR E EXCLUIR
+function prepararEdicao(id) {
+    idMembroEditando = id; // Guarda o ID
+    
+    // Busca os dados no banco para preencher o modal
+    db.collection('membros').doc(id).get().then((doc) => {
+        if (doc.exists) {
+            const membro = doc.data();
+            
+            // Muda o título do modal
+            document.getElementById('titulo-modal-membro').innerText = "Editar Membro";
+            
+            // Preenche os campos
+            document.getElementById('membro-nome').value = membro.nome;
+            document.getElementById('membro-grupo').value = membro.grupoLocal;
+            document.getElementById('membro-funcoes').value = membro.funcoes ? membro.funcoes.join(', ') : '';
+            document.getElementById('membro-area').checked = membro.ehGrupoArea;
+            
+            // Abre o modal
+            document.getElementById('modal-membro').classList.remove('escondido');
+        }
     });
+}
+
+function excluirMembro(id, nome) {
+    // Confirmação de segurança
+    if (confirm(`Tem certeza que deseja excluir ${nome}? Essa ação não pode ser desfeita.`)) {
+        db.collection('membros').doc(id).delete().then(() => {
+            alert("Membro excluído com sucesso.");
+            carregarMembros(); // Atualiza a tabela
+        }).catch((error) => {
+            console.error("Erro ao excluir: ", error);
+        });
+    }
 }
