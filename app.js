@@ -315,3 +315,4 @@ function copiarLink(texto) {
     }
     document.body.removeChild(textArea);
 }
+
