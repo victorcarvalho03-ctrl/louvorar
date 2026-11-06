@@ -201,3 +201,117 @@ function excluirMembro(id, nome) {
         }).catch((error) => console.error("Erro ao excluir: ", error));
     }
 }
+// 6. CONTROLE DE ABAS DO MENU PRINCIPAL
+function mostrarAba(aba) {
+    // Esconde todas as áreas e tira a cor de ativa dos botões
+    document.getElementById('conteudo-membros').classList.add('escondido');
+    document.getElementById('conteudo-eventos').classList.add('escondido');
+    document.getElementById('aba-btn-membros').classList.remove('aba-ativa');
+    document.getElementById('aba-btn-eventos').classList.remove('aba-ativa');
+
+    if (aba === 'membros') {
+        document.getElementById('conteudo-membros').classList.remove('escondido');
+        document.getElementById('aba-btn-membros').classList.add('aba-ativa');
+        carregarMembros(); // Atualiza a lista
+    } else if (aba === 'eventos') {
+        document.getElementById('conteudo-eventos').classList.remove('escondido');
+        document.getElementById('aba-btn-eventos').classList.add('aba-ativa');
+        carregarEventos(); // Atualiza a lista de eventos
+    }
+}
+
+// 7. LÓGICA DE EVENTOS
+function abrirModalEvento() {
+    document.getElementById('evento-titulo').value = "";
+    document.getElementById('evento-data').value = "";
+    document.getElementById('evento-prazo').value = "";
+    document.getElementById('modal-evento').classList.remove('escondido');
+}
+
+function fecharModalEvento() {
+    document.getElementById('modal-evento').classList.add('escondido');
+}
+
+function salvarEvento() {
+    const titulo = document.getElementById('evento-titulo').value;
+    const data = document.getElementById('evento-data').value;
+    const prazo = document.getElementById('evento-prazo').value;
+
+    if (!titulo || !data || !prazo) {
+        alert("Preencha todos os campos do evento.");
+        return;
+    }
+
+    db.collection('eventos').add({
+        titulo: titulo,
+        data: data,
+        prazo: prazo
+    }).then(() => {
+        alert("Evento criado com sucesso!");
+        fecharModalEvento();
+        carregarEventos();
+    }).catch((error) => {
+        console.error("Erro ao criar evento: ", error);
+        alert("Erro ao criar evento.");
+    });
+}
+
+function carregarEventos() {
+    const tabela = document.getElementById('corpo-tabela-eventos');
+    tabela.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Buscando eventos...</td></tr>";
+
+    // Ordena pela data do evento (mais recentes primeiro)
+    db.collection('eventos').orderBy('data', 'desc').get().then((querySnapshot) => {
+        tabela.innerHTML = "";
+
+        if (querySnapshot.empty) {
+            tabela.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Nenhum evento criado ainda.</td></tr>";
+            return;
+        }
+
+        querySnapshot.forEach((doc) => {
+            const evento = doc.data();
+            
+            // Formata as datas para o padrão brasileiro (DD/MM/AAAA)
+            const dataFormatada = evento.data.split('-').reverse().join('/');
+            let prazoFormatado = evento.prazo.replace('T', ' '); // Tira o 'T' da data
+            if (prazoFormatado) {
+                const partes = prazoFormatado.split(' ')[0].split('-');
+                prazoFormatado = `${partes[2]}/${partes[1]}/${partes[0]} às ${prazoFormatado.split(' ')[1]}`;
+            }
+
+            // Gera o link público para este evento específico
+            const linkPublico = window.location.origin + window.location.pathname.replace('index.html', '') + 'disponibilidade.html?evento=' + doc.id;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${evento.titulo}</td>
+                <td>${dataFormatada}</td>
+                <td>${prazoFormatado}</td>
+                <td>
+                    <button onclick="copiarLink('${linkPublico}')" style="background:#4CAF50; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Copiar Link</button>
+                </td>
+            `;
+            tabela.appendChild(tr);
+        });
+    }).catch((error) => {
+        console.error("Erro ao buscar eventos: ", error);
+        tabela.innerHTML = "<tr><td colspan='4' style='color:red; text-align:center;'>Erro ao carregar eventos.</td></tr>";
+    });
+}
+
+// Função para copiar o link facilmente no celular
+function copiarLink(texto) {
+    // Truque para funcionar em navegadores de celular que bloqueiam clipboard API
+    const textArea = document.createElement("textarea");
+    textArea.value = texto;
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+        document.execCommand('copy');
+        alert("Link copiado! Agora é só colar no grupo do WhatsApp.");
+    } catch (err) {
+        prompt("Não foi possível copiar automaticamente. Copie o link abaixo:", texto);
+    }
+    document.body.removeChild(textArea);
+}
