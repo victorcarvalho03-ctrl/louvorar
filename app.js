@@ -583,8 +583,15 @@ function salvarMic(valor, funcao, index) {
 }
 
 function removerAlocado(funcao, idPessoa) {
-    estruturaAtual[funcao] = estruturaAtual[funcao].filter(p => p.id !== idPessoa);
+    // 1. Remove a pessoa da função específica (ex: Soprano)
+    if (estruturaAtual[funcao]) {
+        estruturaAtual[funcao] = estruturaAtual[funcao].filter(p => p.id !== idPessoa);
+    }
+    
+    // 2. Remove o ID da pessoa da lista de "alocados" (para ela voltar a aparecer na lista da direita)
     pessoasAlocadas = pessoasAlocadas.filter(id => id !== idPessoa);
+    
+    // 3. Redesenha a tela para atualizar visualmente
     desenharTabelaExcel();
     desenharPoolDisponiveis();
 }
