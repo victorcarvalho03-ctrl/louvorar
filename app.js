@@ -398,15 +398,19 @@ function desenharTabelaExcel() {
         { sop: 7, ten: 7, base: null, sopro: null }
     ];
 
-    // A MÁGICA ESTÁ AQUI: O parâmetro 'event' e o 'event.stopPropagation()'
-    const renderNome = (func, index) => {
-        if (!estruturaAtual[func] || !estruturaAtual[func][index]) return "";
-        const p = estruturaAtual[func][index];
+    // Função que desenha o nome e o botão de excluir de forma independente
+    const renderCelula = (func, index) => {
+        const p = estruturaAtual[func] && estruturaAtual[func][index];
         
-        // Usamos aspas simples dentro do HTML e passamos o event para parar a propagação
+        // Se a célula estiver vazia, permite clicar para adicionar
+        if (!p) {
+            return `<div onclick="abrirModalSelecao('${func}')" style="min-height:25px; width:100%; cursor:pointer;"></div>`;
+        }
+
+        // Se tiver alguém, desenha o nome e o botão de lixeira (🗑️)
         return `<div style="display:flex; justify-content:space-between; align-items:center; width: 100%;">
-                    <span>${p.nome}</span>
-                    <button type="button" onclick="event.stopPropagation(); removerAlocado('${func}', '${p.id}')" style="background:none; border:none; color:red; cursor:pointer; font-weight:bold; padding:0 5px; font-size: 18px;" title="Remover">×</button>
+                    <span style="font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.nome}</span>
+                    <span onclick="removerAlocado('${func}', '${p.id}')" style="cursor:pointer; color:red; font-weight:bold; padding: 0 5px; font-size: 16px; display: inline-block;">×</span>
                 </div>`;
     };
 
@@ -419,28 +423,31 @@ function desenharTabelaExcel() {
         
         // -- SOPRANO / CONTRALTO --
         if (i < 4) {
+            const fSop = i < 2 ? 'Soprano' : 'Contralto';
             tr.innerHTML += `<td class="cab-verde" style="font-size:10px;">${i===0 ? 'SOPRANO' : (i===1 ? 'CONTRALTO' : '')}</td>`;
-            tr.innerHTML += `<td class="celula-nome" onclick="abrirModalSelecao('${i < 2 ? 'Soprano' : 'Contralto'}')">${renderNome(i < 2 ? 'Soprano' : 'Contralto', i % 2)}</td>`;
-            tr.innerHTML += `<td class="celula-mic" contenteditable="true" onblur="salvarMic(this.innerText, '${i < 2 ? 'Soprano' : 'Contralto'}', ${i%2})">${getMic(i < 2 ? 'Soprano' : 'Contralto', i % 2)}</td>`;
+            tr.innerHTML += `<td class="celula-nome">${renderCelula(fSop, i % 2)}</td>`;
+            tr.innerHTML += `<td class="celula-mic" contenteditable="true" onblur="salvarMic(this.innerText, '${fSop}', ${i%2})">${getMic(fSop, i % 2)}</td>`;
         } else {
             tr.innerHTML += `<td></td><td></td><td></td>`;
         }
 
         // -- TENOR / BAIXO --
         if (i < 4) {
+            const fTen = i < 2 ? 'Tenor' : 'Baixo';
             tr.innerHTML += `<td class="cab-verde" style="font-size:10px;">${i===0 ? 'TENOR' : (i===1 ? 'BAIXO' : '')}</td>`;
-            tr.innerHTML += `<td class="celula-nome" onclick="abrirModalSelecao('${i < 2 ? 'Tenor' : 'Baixo'}')">${renderNome(i < 2 ? 'Tenor' : 'Baixo', i % 2)}</td>`;
-            tr.innerHTML += `<td class="celula-mic" contenteditable="true" onblur="salvarMic(this.innerText, '${i < 2 ? 'Tenor' : 'Baixo'}', ${i%2})">${getMic(i < 2 ? 'Tenor' : 'Baixo', i % 2)}</td>`;
+            tr.innerHTML += `<td class="celula-nome">${renderCelula(fTen, i % 2)}</td>`;
+            tr.innerHTML += `<td class="celula-mic" contenteditable="true" onblur="salvarMic(this.innerText, '${fTen}', ${i%2})">${getMic(fTen, i % 2)}</td>`;
         } else {
             tr.innerHTML += `<td></td><td></td><td></td>`;
         }
 
         // -- BASE / SOPRO --
         tr.innerHTML += `<td class="cab-azul" style="font-size:10px;">${linha.base || ''}</td>`;
-        tr.innerHTML += `<td class="celula-nome" onclick="${linha.base ? `abrirModalSelecao('${linha.base}')` : ''}">${linha.base ? renderNome(linha.base, 0) : ''}</td>`;
+        tr.innerHTML += `<td class="celula-nome">${linha.base ? renderCelula(linha.base, 0) : ''}</td>`;
         
+        const funcSopro = linha.sopro ? linha.sopro.replace('CORDAS: ', '') : null;
         tr.innerHTML += `<td class="cab-azul" style="font-size:10px;">${linha.sopro || ''}</td>`;
-        tr.innerHTML += `<td class="celula-nome" onclick="${linha.sopro ? `abrirModalSelecao('${linha.sopro.replace('CORDAS: ', '')}')` : ''}">${linha.sopro ? renderNome(linha.sopro.replace('CORDAS: ', ''), 0) : ''}</td>`;
+        tr.innerHTML += `<td class="celula-nome">${funcSopro ? renderCelula(funcSopro, 0) : ''}</td>`;
 
         tbody.appendChild(tr);
     });
@@ -449,7 +456,7 @@ function desenharTabelaExcel() {
     const trReg = document.createElement('tr');
     trReg.innerHTML = `
         <td colspan="9" class="cab-vermelho" style="text-align:right;">REGÊNCIA:</td>
-        <td class="celula-nome" onclick="abrirModalSelecao('Regência')" style="background:#ffcccc;">${renderNome('Regência', 0)}</td>
+        <td class="celula-nome" style="background:#ffcccc;">${renderCelula('Regência', 0)}</td>
     `;
     tbody.appendChild(trReg);
 }
