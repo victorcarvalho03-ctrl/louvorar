@@ -16,10 +16,11 @@ const db = firebase.firestore();
 let idMembroEditando = null;
 let meuNivelAcesso = "visitante";
 let meuGrupoLocal = "nenhum";
-let abaMembrosAtual = "locais"; // Pode ser 'locais' ou 'area'
-let estruturaAtual = {}; // Guarda o que está sendo montado
-let pessoasAlocadas = []; // Guarda os IDs de quem já foi chamado
-let disponiveisEvento = []; // Todos que responderam "Sim"
+let abaMembrosAtual = "locais"; 
+let estruturaAtual = {}; 
+let pessoasAlocadas = []; 
+let disponiveisEvento = []; 
+let funcaoSelecionando = "";
 
 // 2. LÓGICA DE LOGIN E PERMISSÕES
 function fazerLogin() {
@@ -38,21 +39,16 @@ function fazerLogin() {
 }
 
 function verificarPermissoes(emailLogado) {
-    // Busca o e-mail na coleção 'usuarios' para ver quem é
     db.collection('usuarios').doc(emailLogado).get().then((doc) => {
         if (doc.exists) {
             const dados = doc.data();
-            meuNivelAcesso = dados.nivel; // 'admin' ou 'lider'
+            meuNivelAcesso = dados.nivel; 
             meuGrupoLocal = dados.grupoLocal; 
-            
-            // Mostra o botão de adicionar membro se for admin ou lider
             document.getElementById('btn-add-membro').style.display = "block";
         } else {
-            // Se não achar o usuário no banco, é visitante (só leitura)
             meuNivelAcesso = "visitante";
         }
 
-        // Libera a tela
         document.getElementById('tela-login').classList.add('escondido');
         document.getElementById('painel-principal').classList.remove('escondido');
         carregarMembros();
@@ -78,11 +74,9 @@ auth.onAuthStateChanged((user) => {
     }
 });
 
-// 3. LÓGICA DAS SUB-ABAS (Locais vs Área)
+// 3. LÓGICA DAS SUB-ABAS
 function mudarSubAba(aba) {
     abaMembrosAtual = aba;
-    
-    // Atualiza visual dos botões
     document.getElementById('sub-aba-locais').classList.remove('ativa');
     document.getElementById('sub-aba-area').classList.remove('ativa');
     
@@ -91,8 +85,7 @@ function mudarSubAba(aba) {
     } else {
         document.getElementById('sub-aba-area').classList.add('ativa');
     }
-    
-    carregarMembros(); // Recarrega a tabela filtrada
+    carregarMembros();
 }
 
 // 4. BUSCAR E RENDERIZAR MEMBROS
@@ -106,8 +99,6 @@ function carregarMembros() {
 
         querySnapshot.forEach((doc) => {
             const membro = doc.data();
-            
-            // Filtro das Abas: Se for 'area' e o membro não for da área, pula.
             if (abaMembrosAtual === 'area' && !membro.ehGrupoArea) return;
 
             contador++;
@@ -115,7 +106,6 @@ function carregarMembros() {
             const funcoes = membro.funcoes ? membro.funcoes.join(', ') : '';
             const isArea = membro.ehGrupoArea ? "Sim" : "Não";
 
-            // LÓGICA DE PERMISSÃO: Quem pode editar esse membro?
             let botoesAcao = "";
             if (meuNivelAcesso === 'admin' || (meuNivelAcesso === 'lider' && meuGrupoLocal === membro.grupoLocal)) {
                 botoesAcao = `
@@ -139,14 +129,13 @@ function carregarMembros() {
         if (contador === 0) {
             tabela.innerHTML = "<tr><td colspan='5' style='text-align:center;'>Nenhum membro encontrado nesta aba.</td></tr>";
         }
-
     }).catch((error) => {
         console.error("Erro ao buscar membros: ", error);
         tabela.innerHTML = "<tr><td colspan='5' style='color:red; text-align:center;'>Erro ao carregar os dados.</td></tr>";
     });
 }
 
-// 5. LÓGICA DO MODAL (CRIAR E EDITAR)
+// 5. LÓGICA DO MODAL DE MEMBROS
 function abrirModal() {
     idMembroEditando = null;
     document.getElementById('titulo-modal-membro').innerText = "Cadastrar Novo Membro";
@@ -167,7 +156,6 @@ function salvarMembro() {
     const ehGrupoArea = document.getElementById('membro-area').checked;
 
     if (!nome || !funcoesTexto) { alert("Preencha nome e funções."); return; }
-
     const funcoesArray = funcoesTexto.split(',').map(f => f.trim());
     const dadosMembro = { nome, grupoLocal, funcoes: funcoesArray, ehGrupoArea };
 
@@ -204,12 +192,12 @@ function excluirMembro(id, nome) {
         }).catch((error) => console.error("Erro ao excluir: ", error));
     }
 }
+
 // 6. CONTROLE DE ABAS DO MENU PRINCIPAL
 function mostrarAba(aba) {
     document.getElementById('conteudo-membros').classList.add('escondido');
     document.getElementById('conteudo-eventos').classList.add('escondido');
     document.getElementById('conteudo-estrutura').classList.add('escondido');
-    
     document.getElementById('aba-btn-membros').classList.remove('aba-ativa');
     document.getElementById('aba-btn-eventos').classList.remove('aba-ativa');
     document.getElementById('aba-btn-estrutura').classList.remove('aba-ativa');
@@ -246,22 +234,14 @@ function salvarEvento() {
     const data = document.getElementById('evento-data').value;
     const prazo = document.getElementById('evento-prazo').value;
 
-    if (!titulo || !data || !prazo) {
-        alert("Preencha todos os campos do evento.");
-        return;
-    }
+    if (!titulo || !data || !prazo) { alert("Preencha todos os campos do evento."); return; }
 
     db.collection('eventos').add({
-        titulo: titulo,
-        data: data,
-        prazo: prazo
+        titulo: titulo, data: data, prazo: prazo
     }).then(() => {
-        alert("Evento criado com sucesso!");
-        fecharModalEvento();
-        carregarEventos();
+        alert("Evento criado com sucesso!"); fecharModalEvento(); carregarEventos();
     }).catch((error) => {
-        console.error("Erro ao criar evento: ", error);
-        alert("Erro ao criar evento.");
+        console.error("Erro ao criar evento: ", error); alert("Erro ao criar evento.");
     });
 }
 
@@ -269,10 +249,8 @@ function carregarEventos() {
     const tabela = document.getElementById('corpo-tabela-eventos');
     tabela.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Buscando eventos...</td></tr>";
 
-    // Ordena pela data do evento (mais recentes primeiro)
     db.collection('eventos').orderBy('data', 'desc').get().then((querySnapshot) => {
         tabela.innerHTML = "";
-
         if (querySnapshot.empty) {
             tabela.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Nenhum evento criado ainda.</td></tr>";
             return;
@@ -280,16 +258,12 @@ function carregarEventos() {
 
         querySnapshot.forEach((doc) => {
             const evento = doc.data();
-            
-            // Formata as datas para o padrão brasileiro (DD/MM/AAAA)
             const dataFormatada = evento.data.split('-').reverse().join('/');
-            let prazoFormatado = evento.prazo.replace('T', ' '); // Tira o 'T' da data
+            let prazoFormatado = evento.prazo.replace('T', ' '); 
             if (prazoFormatado) {
                 const partes = prazoFormatado.split(' ')[0].split('-');
                 prazoFormatado = `${partes[2]}/${partes[1]}/${partes[0]} às ${prazoFormatado.split(' ')[1]}`;
             }
-
-            // Gera o link público para este evento específico
             const linkPublico = window.location.origin + window.location.pathname.replace('index.html', '') + 'disponibilidade.html?evento=' + doc.id;
 
             const tr = document.createElement('tr');
@@ -297,9 +271,7 @@ function carregarEventos() {
                 <td>${evento.titulo}</td>
                 <td>${dataFormatada}</td>
                 <td>${prazoFormatado}</td>
-                <td>
-                    <button onclick="copiarLink('${linkPublico}')" style="background:#4CAF50; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Copiar Link</button>
-                </td>
+                <td><button onclick="copiarLink('${linkPublico}')" style="background:#4CAF50; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Copiar Link</button></td>
             `;
             tabela.appendChild(tr);
         });
@@ -309,9 +281,7 @@ function carregarEventos() {
     });
 }
 
-// Função para copiar o link facilmente no celular
 function copiarLink(texto) {
-    // Truque para funcionar em navegadores de celular que bloqueiam clipboard API
     const textArea = document.createElement("textarea");
     textArea.value = texto;
     document.body.appendChild(textArea);
@@ -325,7 +295,7 @@ function copiarLink(texto) {
     document.body.removeChild(textArea);
 }
 
-// --- LÓGICA DA ESTRUTURA ---
+// 8. LÓGICA DA ESTRUTURA
 function carregarSelectEventos() {
     const select = document.getElementById('select-evento-estrutura');
     select.innerHTML = "<option value=''>Selecione...</option>";
@@ -337,9 +307,6 @@ function carregarSelectEventos() {
         });
     });
 }
-
-// --- LÓGICA DA ESTRUTURA (V2 - Tabela Excel e Múltipla Seleção) ---
-let funcaoSelecionando = ""; 
 
 function carregarEstrutura() {
     const idEvento = document.getElementById('select-evento-estrutura').value;
@@ -370,8 +337,10 @@ function carregarEstrutura() {
         if (docEstrutura.exists) {
             estruturaAtual = docEstrutura.data();
             for (let func in estruturaAtual) {
-                if (estruturaAtual[func]) {
-                    estruturaAtual[func].forEach(p => pessoasAlocadas.push(p.id));
+                if (estruturaAtual[func] && Array.isArray(estruturaAtual[func])) {
+                    estruturaAtual[func].forEach(p => {
+                        if(p && p.id) pessoasAlocadas.push(p.id);
+                    });
                 }
             }
         }
@@ -398,16 +367,13 @@ function desenharTabelaExcel() {
         { sop: 7, ten: 7, base: null, sopro: null }
     ];
 
-    // Função que desenha o nome e o botão de excluir de forma independente
     const renderCelula = (func, index) => {
         const p = estruturaAtual[func] && estruturaAtual[func][index];
         
-        // Se a célula estiver vazia, permite clicar para adicionar
         if (!p) {
             return `<div onclick="abrirModalSelecao('${func}')" style="min-height:25px; width:100%; cursor:pointer;"></div>`;
         }
 
-        // Se tiver alguém, desenha o nome e o botão de lixeira (🗑️)
         return `<div style="display:flex; justify-content:space-between; align-items:center; width: 100%;">
                     <span style="font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.nome}</span>
                     <span onclick="removerAlocado('${func}', '${p.id}')" style="cursor:pointer; color:red; font-weight:bold; padding: 0 5px; font-size: 16px; display: inline-block;">×</span>
@@ -421,7 +387,6 @@ function desenharTabelaExcel() {
     configLinhas.forEach((linha, i) => {
         const tr = document.createElement('tr');
         
-        // -- SOPRANO / CONTRALTO --
         if (i < 4) {
             const fSop = i < 2 ? 'Soprano' : 'Contralto';
             tr.innerHTML += `<td class="cab-verde" style="font-size:10px;">${i===0 ? 'SOPRANO' : (i===1 ? 'CONTRALTO' : '')}</td>`;
@@ -431,7 +396,6 @@ function desenharTabelaExcel() {
             tr.innerHTML += `<td></td><td></td><td></td>`;
         }
 
-        // -- TENOR / BAIXO --
         if (i < 4) {
             const fTen = i < 2 ? 'Tenor' : 'Baixo';
             tr.innerHTML += `<td class="cab-verde" style="font-size:10px;">${i===0 ? 'TENOR' : (i===1 ? 'BAIXO' : '')}</td>`;
@@ -441,7 +405,6 @@ function desenharTabelaExcel() {
             tr.innerHTML += `<td></td><td></td><td></td>`;
         }
 
-        // -- BASE / SOPRO --
         tr.innerHTML += `<td class="cab-azul" style="font-size:10px;">${linha.base || ''}</td>`;
         tr.innerHTML += `<td class="celula-nome">${linha.base ? renderCelula(linha.base, 0) : ''}</td>`;
         
@@ -452,7 +415,6 @@ function desenharTabelaExcel() {
         tbody.appendChild(tr);
     });
 
-    // -- REGÊNCIA --
     const trReg = document.createElement('tr');
     trReg.innerHTML = `
         <td colspan="9" class="cab-vermelho" style="text-align:right;">REGÊNCIA:</td>
@@ -471,7 +433,6 @@ function desenharPoolDisponiveis() {
     } else {
         restantes.forEach(p => {
             const obsIcon = p.obs ? `<br><small style="color:#d9534f;">⚠️ ${p.obs}</small>` : '';
-            // Adicionamos o clique para abrir as opções de alocação direto no pool
             pool.innerHTML += `
                 <div class="item-disponivel" onclick="alocarPeloPool('${p.id}')">
                     <strong>${p.nome}</strong><br>
@@ -482,16 +443,13 @@ function desenharPoolDisponiveis() {
     }
 }
 
-// Nova função para alocar clicando direto na lista de disponíveis
 function alocarPeloPool(id) {
     const pessoa = disponiveisEvento.find(p => p.id === id);
     if(!pessoa) return;
     
     if (pessoa.funcoes.length === 1) {
-        // Se a pessoa só tem 1 função, aloca direto
         alocarPessoa(pessoa.funcoes[0], pessoa);
     } else {
-        // Se tem mais de uma função, pergunta qual usar
         let msg = `Em qual função você quer alocar ${pessoa.nome}?\n\n`;
         pessoa.funcoes.forEach((f, i) => { msg += `${i+1}. ${f}\n`; });
         
@@ -503,7 +461,6 @@ function alocarPeloPool(id) {
     }
 }
 
-// Função auxiliar para alocar (já que o modal agora é múltiplo)
 function alocarPessoa(funcao, pessoa) {
     if (!estruturaAtual[funcao]) estruturaAtual[funcao] = [];
     if (funcao === 'Regência' && estruturaAtual[funcao].length > 0) {
@@ -576,22 +533,18 @@ function confirmarSelecaoMultipla() {
     desenharPoolDisponiveis();
 }
 
-// --- SALVAR MIC ---
 function salvarMic(valor, funcao, index) {
     if(!estruturaAtual['Mic_' + funcao]) estruturaAtual['Mic_' + funcao] = [];
     estruturaAtual['Mic_' + funcao][index] = { nome: valor };
 }
 
+// ESTA É A FUNÇÃO CORRIGIDA (Apenas uma, e chamando as funções certas)
 function removerAlocado(funcao, idPessoa) {
-    // 1. Remove a pessoa da função específica (ex: Soprano)
     if (estruturaAtual[funcao]) {
         estruturaAtual[funcao] = estruturaAtual[funcao].filter(p => p.id !== idPessoa);
     }
-    
-    // 2. Remove o ID da pessoa da lista de "alocados" (para ela voltar a aparecer na lista da direita)
     pessoasAlocadas = pessoasAlocadas.filter(id => id !== idPessoa);
     
-    // 3. Redesenha a tela para atualizar visualmente
     desenharTabelaExcel();
     desenharPoolDisponiveis();
 }
@@ -607,19 +560,3 @@ function salvarEstrutura() {
         alert("Erro ao salvar.");
     });
 }
-
-function removerAlocado(funcao, idPessoa) {
-    estruturaAtual[funcao] = estruturaAtual[funcao].filter(p => p.id !== idPessoa);
-    pessoasAlocadas = pessoasAlocadas.filter(id => id !== idPessoa);
-    renderizarTela();
-}
-
-function salvarEstrutura() {
-    const idEvento = document.getElementById('select-evento-estrutura').value;
-    if (!idEvento) return;
-
-    db.collection('estruturas').doc(idEvento).set(estruturaAtual).then(() => {
-        alert("Estrutura salva com sucesso!");
-    }).catch(err => console.error(err));
-}
-
