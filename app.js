@@ -338,87 +338,122 @@ function carregarSelectEventos() {
     });
 }
 
+// --- LÓGICA DA ESTRUTURA (V2 - Tabela Excel e Múltipla Seleção) ---
+let funcaoSelecionando = ""; 
+
 function carregarEstrutura() {
     const idEvento = document.getElementById('select-evento-estrutura').value;
     if (!idEvento) return;
 
-    // Limpa a tela
     estruturaAtual = {};
     pessoasAlocadas = [];
     disponiveisEvento = [];
     
-    const campos = ['Soprano', 'Contralto', 'Tenor', 'Baixo', 'Teclado', 'Bateria', 'Baixo Elétrico', 'Violão', 'Guitarra', 'Sax', 'Flauta', 'Violino', 'Regência'];
-    campos.forEach(c => {
-        const el = document.getElementById('lista-' + c.toLowerCase().replace(' ', '-').replace('á', 'a').replace('ê', 'e'));
-        if(el) {
-            el.innerHTML = (c === 'Teclado' || c === 'Bateria' || c === 'Baixo Elétrico' || c === 'Violão' || c === 'Guitarra' || c === 'Sax' || c === 'Flauta' || c === 'Violino') ? c + ' (Clique)' : 'Clique para adicionar';
-        }
-    });
     document.getElementById('lista-disponiveis').innerHTML = "Buscando disponíveis...";
 
-    // 1. Busca as respostas
     db.collection('disponibilidades').where('idEvento', '==', idEvento).where('status', '==', 'Disponível').get()
     .then(snapshot => {
-        // 2. Busca os dados completos (funções) de cada pessoa
         let promises = [];
         snapshot.forEach(docResp => {
             const resp = docResp.data();
             promises.push(db.collection('membros').doc(resp.idMembro).get().then(docMembro => {
                 if (docMembro.exists) {
                     const m = docMembro.data();
-                    disponiveisEvento.push({
-                        id: docMembro.id,
-                        nome: m.nome,
-                        funcoes: m.funcoes || [],
-                        obs: resp.observacao
-                    });
+                    disponiveisEvento.push({ id: docMembro.id, nome: m.nome, funcoes: m.funcoes || [], obs: resp.observacao });
                 }
             }));
         });
         return Promise.all(promises);
     }).then(() => {
-        // 3. Tenta buscar uma estrutura já salva para este evento
         return db.collection('estruturas').doc(idEvento).get();
     }).then(docEstrutura => {
         if (docEstrutura.exists) {
             estruturaAtual = docEstrutura.data();
-            // Recria a lista de alocados
             for (let func in estruturaAtual) {
                 if (estruturaAtual[func]) {
-                    estruturaAtual[func].forEach(p => {
-                        pessoasAlocadas.push(p.id);
-                    });
+                    estruturaAtual[func].forEach(p => pessoasAlocadas.push(p.id));
                 }
             }
         }
-        renderizarTela();
+        desenharTabelaExcel();
+        desenharPoolDisponiveis();
     }).catch(err => {
         console.error(err);
         document.getElementById('lista-disponiveis').innerHTML = "Erro ao carregar.";
     });
 }
 
-function renderizarTela() {
-    const campos = ['Soprano', 'Contralto', 'Tenor', 'Baixo', 'Teclado', 'Bateria', 'Baixo Elétrico', 'Violão', 'Guitarra', 'Sax', 'Flauta', 'Violino', 'Regência'];
-    
-    // Desenha a tabela
-    campos.forEach(func => {
-        const el = document.getElementById('lista-' + func.toLowerCase().replace(' ', '-').replace('á', 'a').replace('ê', 'e'));
-        if(!el) return;
+function desenharTabelaExcel() {
+    const tbody = document.getElementById('corpo-tabela-excel');
+    tbody.innerHTML = "";
+
+    // Estrutura de colunas para desenhar linha por linha (igual à imagem)
+    const configLinhas = [
+        { sop: 0, ten: 0, base: 'Teclado', sopro: 'Clarinete' },
+        { sop: 1, ten: 1, base: 'Bateria', sopro: 'Flauta' },
+        { sop: 2, ten: 2, base: 'Baixo Elétrico', sopro: 'Sax' },
+        { sop: 3, ten: 3, base: 'Violão', sopro: 'Trompete' },
+        { sop: 4, ten: 4, base: 'Guitarra', sopro: null },
+        { sop: 5, ten: 5, base: null, sopro: 'CORDAS: Violino' },
+        { sop: 6, ten: 6, base: null, sopro: null },
+        { sop: 7, ten: 7, base: null, sopro: null }
+    ];
+
+    // Variável auxiliar para pegar o nome alocado pela posição (ex: Soprano 0)
+    const getNome = (func, index) => {
+        if (!estruturaAtual[func] || !estruturaAtual[func][index]) return "";
+        return estruturaAtual[func][index].nome;
+    };
+    const getId = (func, index) => {
+        if (!estruturaAtual[func] || !estruturaAtual[func][index]) return "";
+        return estruturaAtual[func][index].id;
+    };
+    const getMic = (func, index) => {
+         return estruturaAtual['Mic_' + func] && estruturaAtual['Mic_' + func][index] ? estruturaAtual['Mic_' + func][index].nome : "";
+    }
+
+    // Como a tabela é complexa, vamos montar linha por linha para o topo (Vozes e Base/Sopro)
+    configLinhas.forEach((linha, i) => {
+        const tr = document.createElement('tr');
         
-        const alocados = estruturaAtual[func] || [];
-        
-        if (alocados.length === 0) {
-            el.innerHTML = (['Teclado','Bateria','Baixo Elétrico','Violão','Guitarra','Sax','Flauta','Violino'].includes(func)) ? func + ' (Clique)' : 'Clique para adicionar';
+        // -- BLOCO SOPRANO / CONTRALTO --
+        if (i < 4) {
+            tr.innerHTML += `<td class="cab-verde" style="font-size:10px;">${i===0 ? 'SOPRANO' : (i===1 ? 'CONTRALTO' : '')}</td>`;
+            tr.innerHTML += `<td class="celula-nome" onclick="abrirModalSelecao('${i===0||i===1?'Soprano':'Contralto'}')">${getNome(i < 2 ? 'Soprano' : 'Contralto', i % 2)}</td>`;
+            tr.innerHTML += `<td class="celula-mic" contenteditable="true" onblur="salvarMic(this.innerText, 'Soprano', ${i%2})">${getMic(i < 2 ? 'Soprano' : 'Contralto', i % 2)}</td>`;
         } else {
-            el.innerHTML = "";
-            alocados.forEach(p => {
-                el.innerHTML += `<span class="nome-alocado">${p.nome} <button onclick="removerAlocado('${func}', '${p.id}'); event.stopPropagation();">x</button></span>`;
-            });
+            tr.innerHTML += `<td></td><td></td><td></td>`; // Colunas vazias se acabar
         }
+
+        // -- BLOCO TENOR / BAIXO --
+        if (i < 4) {
+            tr.innerHTML += `<td class="cab-verde" style="font-size:10px;">${i===0 ? 'TENOR' : (i===1 ? 'BAIXO' : '')}</td>`;
+            tr.innerHTML += `<td class="celula-nome" onclick="abrirModalSelecao('${i===0||i===1?'Tenor':'Baixo'}')">${getNome(i < 2 ? 'Tenor' : 'Baixo', i % 2)}</td>`;
+            tr.innerHTML += `<td class="celula-mic" contenteditable="true" onblur="salvarMic(this.innerText, 'Tenor', ${i%2})">${getMic(i < 2 ? 'Tenor' : 'Baixo', i % 2)}</td>`;
+        } else {
+            tr.innerHTML += `<td></td><td></td><td></td>`;
+        }
+
+        // -- BLOCO BASE / SOPRO --
+        tr.innerHTML += `<td class="cab-azul" style="font-size:10px;">${linha.base || ''}</td>`;
+        tr.innerHTML += `<td class="celula-nome" onclick="${linha.base ? `abrirModalSelecao('${linha.base}')` : ''}">${linha.base ? getNome(linha.base, 0) : ''}</td>`;
+        
+        tr.innerHTML += `<td class="cab-azul" style="font-size:10px;">${linha.sopro || ''}</td>`;
+        tr.innerHTML += `<td class="celula-nome" onclick="${linha.sopro ? `abrirModalSelecao('${linha.sopro.replace('CORDAS: ', '')}')` : ''}">${linha.sopro ? getNome(linha.sopro.replace('CORDAS: ', ''), 0) : ''}</td>`;
+
+        tbody.appendChild(tr);
     });
 
-    // Desenha o Pool de Disponíveis (Filtrado)
+    // Linha Regência
+    const trReg = document.createElement('tr');
+    trReg.innerHTML = `
+        <td colspan="9" class="cab-vermelho" style="text-align:right;">REGÊNCIA:</td>
+        <td class="celula-nome" onclick="abrirModalSelecao('Regência')" style="background:#ffcccc;">${getNome('Regência', 0)}</td>
+    `;
+    tbody.appendChild(trReg);
+}
+
+function desenharPoolDisponiveis() {
     const pool = document.getElementById('lista-disponiveis');
     const restantes = disponiveisEvento.filter(p => !pessoasAlocadas.includes(p.id));
     
@@ -427,64 +462,100 @@ function renderizarTela() {
         pool.innerHTML = "Todos os disponíveis já foram alocados!";
     } else {
         restantes.forEach(p => {
-            const obsIcon = p.obs ? ` ⚠️ (${p.obs})` : '';
-            pool.innerHTML += `<div class="item-disponivel" onclick="abrirSeletorManual('${p.id}')"><strong>${p.nome}</strong><br><small>${p.funcoes.join(', ')}</small>${obsIcon}</div>`;
+            const obsIcon = p.obs ? `<br><small style="color:#d9534f;">⚠️ ${p.obs}</small>` : '';
+            pool.innerHTML += `
+                <div class="item-disponivel">
+                    <strong>${p.nome}</strong><br>
+                    <small>${p.funcoes.join(', ')}</small>
+                    ${obsIcon}
+                </div>`;
         });
     }
 }
 
-function abrirSeletor(funcao) {
-    // Pega quem ainda não foi alocado E tem essa função
-    const filtrados = disponiveisEvento.filter(p => 
-        !pessoasAlocadas.includes(p.id) && p.funcoes.includes(funcao)
-    );
+// --- SISTEMA DE MÚLTIPLA SELEÇÃO ---
+function abrirModalSelecao(funcao) {
+    funcaoSelecionando = funcao;
+    const filtrados = disponiveisEvento.filter(p => !pessoasAlocadas.includes(p.id) && p.funcoes.includes(funcao));
 
     if (filtrados.length === 0) {
-        alert(`Não há ninguém disponível para ${funcao} que ainda não tenha sido alocado.`);
+        alert(`Não há ninguém mais disponível para ${funcao}.`);
         return;
     }
-    
-    // Como o prompt nativo é feio, vamos usar um simples prompt para selecionar
-    let msg = `Selecione o número para alocar em ${funcao}:\n\n`;
+
+    document.getElementById('titulo-selecao').innerText = `Adicionar em ${funcao}`;
+    const container = document.getElementById('lista-checkbox-selecao');
+    container.innerHTML = "";
+
     filtrados.forEach((p, index) => {
-        msg += `${index + 1}. ${p.nome}\n`;
+        const obs = p.obs ? ` ⚠️ (${p.obs})` : '';
+        container.innerHTML += `
+            <label style="display:flex; align-items:center; padding:10px; border-bottom:1px solid #eee; cursor:pointer;">
+                <input type="checkbox" value="${p.id}" style="width:20px; height:20px; margin-right:10px;">
+                <span><strong>${p.nome}</strong> <small>${obs}</small></span>
+            </label>
+        `;
     });
 
-    const escolha = prompt(msg);
-    if (escolha) {
-        const idx = parseInt(escolha) - 1;
-        if (filtrados[idx]) {
-            alocarPessoa(funcao, filtrados[idx]);
-        }
-    }
+    document.getElementById('modal-selecao').classList.remove('escondido');
 }
 
-function abrirSeletorManual(idMembro) {
-    const pessoa = disponiveisEvento.find(p => p.id === idMembro);
-    if(!pessoa) return;
-    
-    let msg = `Em qual função você quer alocar ${pessoa.nome}?\n\n`;
-    pessoa.funcoes.forEach((f, i) => { msg += `${i+1}. ${f}\n`; });
-    
-    const escolha = prompt(msg);
-    if(escolha) {
-        const func = pessoa.funcoes[parseInt(escolha)-1];
-        if(func) alocarPessoa(func, pessoa);
-    }
+function fecharModalSelecao() {
+    document.getElementById('modal-selecao').classList.add('escondido');
 }
 
-function alocarPessoa(funcao, pessoa) {
-    if (!estruturaAtual[funcao]) estruturaAtual[funcao] = [];
+function confirmarSelecaoMultipla() {
+    const checkboxes = document.querySelectorAll('#lista-checkbox-selecao input[type="checkbox"]:checked');
     
-    // Verifica se não é a Regência (que só aceita 1)
-    if (funcao === 'Regência' && estruturaAtual[funcao].length > 0) {
-        alert("Já existe um regente alocado.");
+    if (checkboxes.length === 0) {
+        alert("Selecione pelo menos uma pessoa.");
         return;
     }
 
-    estruturaAtual[funcao].push({ id: pessoa.id, nome: pessoa.nome });
-    pessoasAlocadas.push(pessoa.id);
-    renderizarTela();
+    if (funcaoSelecionando === 'Regência' && checkboxes.length > 1) {
+        alert("Você só pode escalar 1 regente.");
+        return;
+    }
+
+    if (!estruturaAtual[funcaoSelecionando]) estruturaAtual[funcaoSelecionando] = [];
+
+    checkboxes.forEach(cb => {
+        const id = cb.value;
+        const pessoa = disponiveisEvento.find(p => p.id === id);
+        if (pessoa) {
+            estruturaAtual[funcaoSelecionando].push({ id: pessoa.id, nome: pessoa.nome });
+            pessoasAlocadas.push(pessoa.id);
+        }
+    });
+
+    fecharModalSelecao();
+    desenharTabelaExcel();
+    desenharPoolDisponiveis();
+}
+
+// --- SALVAR MIC ---
+function salvarMic(valor, funcao, index) {
+    if(!estruturaAtual['Mic_' + funcao]) estruturaAtual['Mic_' + funcao] = [];
+    estruturaAtual['Mic_' + funcao][index] = { nome: valor };
+}
+
+function removerAlocado(funcao, idPessoa) {
+    estruturaAtual[funcao] = estruturaAtual[funcao].filter(p => p.id !== idPessoa);
+    pessoasAlocadas = pessoasAlocadas.filter(id => id !== idPessoa);
+    desenharTabelaExcel();
+    desenharPoolDisponiveis();
+}
+
+function salvarEstrutura() {
+    const idEvento = document.getElementById('select-evento-estrutura').value;
+    if (!idEvento) return;
+
+    db.collection('estruturas').doc(idEvento).set(estruturaAtual).then(() => {
+        alert("Estrutura salva com sucesso!");
+    }).catch(err => {
+        console.error(err);
+        alert("Erro ao salvar.");
+    });
 }
 
 function removerAlocado(funcao, idPessoa) {
