@@ -398,13 +398,13 @@ function desenharTabelaExcel() {
         { sop: 7, ten: 7, base: null, sopro: null }
     ];
 
-    // Variável auxiliar que agora cria o botão de X (lixeira) no nome
+    // MUDANÇA AQUI: O botão de X agora usa "this" e "onclick"
     const renderNome = (func, index) => {
         if (!estruturaAtual[func] || !estruturaAtual[func][index]) return "";
         const p = estruturaAtual[func][index];
-        return `<span style="display:flex; justify-content:space-between; align-items:center;">
+        return `<span style="display:flex; justify-content:space-between; align-items:center; width: 100%;">
                     <span>${p.nome}</span>
-                    <button onclick="removerAlocado('${func}', '${p.id}'); event.stopPropagation();" style="background:none; border:none; color:red; cursor:pointer; font-weight:bold; padding:0 5px;">x</button>
+                    <button type="button" onclick="removerAlocado('${func}', '${p.id}')" style="background:none; border:none; color:red; cursor:pointer; font-weight:bold; padding:0 5px; font-size: 16px;" title="Remover">x</button>
                 </span>`;
     };
 
@@ -418,7 +418,8 @@ function desenharTabelaExcel() {
         // -- BLOCO SOPRANO / CONTRALTO --
         if (i < 4) {
             tr.innerHTML += `<td class="cab-verde" style="font-size:10px;">${i===0 ? 'SOPRANO' : (i===1 ? 'CONTRALTO' : '')}</td>`;
-            tr.innerHTML += `<td class="celula-nome" onclick="abrirModalSelecao('${i < 2 ? 'Soprano' : 'Contralto'}')">${renderNome(i < 2 ? 'Soprano' : 'Contralto', i % 2)}</td>`;
+            // MUDANÇA AQUI: Tiramos o onclick da célula TD e colocamos no conteúdo interno para não conflitar
+            tr.innerHTML += `<td class="celula-nome"><div onclick="abrirModalSelecao('${i < 2 ? 'Soprano' : 'Contralto'}')" style="min-height:20px; width:100%;">${renderNome(i < 2 ? 'Soprano' : 'Contralto', i % 2)}</div></td>`;
             tr.innerHTML += `<td class="celula-mic" contenteditable="true" onblur="salvarMic(this.innerText, '${i < 2 ? 'Soprano' : 'Contralto'}', ${i%2})">${getMic(i < 2 ? 'Soprano' : 'Contralto', i % 2)}</td>`;
         } else {
             tr.innerHTML += `<td></td><td></td><td></td>`;
@@ -427,7 +428,7 @@ function desenharTabelaExcel() {
         // -- BLOCO TENOR / BAIXO --
         if (i < 4) {
             tr.innerHTML += `<td class="cab-verde" style="font-size:10px;">${i===0 ? 'TENOR' : (i===1 ? 'BAIXO' : '')}</td>`;
-            tr.innerHTML += `<td class="celula-nome" onclick="abrirModalSelecao('${i < 2 ? 'Tenor' : 'Baixo'}')">${renderNome(i < 2 ? 'Tenor' : 'Baixo', i % 2)}</td>`;
+            tr.innerHTML += `<td class="celula-nome"><div onclick="abrirModalSelecao('${i < 2 ? 'Tenor' : 'Baixo'}')" style="min-height:20px; width:100%;">${renderNome(i < 2 ? 'Tenor' : 'Baixo', i % 2)}</div></td>`;
             tr.innerHTML += `<td class="celula-mic" contenteditable="true" onblur="salvarMic(this.innerText, '${i < 2 ? 'Tenor' : 'Baixo'}', ${i%2})">${getMic(i < 2 ? 'Tenor' : 'Baixo', i % 2)}</td>`;
         } else {
             tr.innerHTML += `<td></td><td></td><td></td>`;
@@ -435,10 +436,10 @@ function desenharTabelaExcel() {
 
         // -- BLOCO BASE / SOPRO --
         tr.innerHTML += `<td class="cab-azul" style="font-size:10px;">${linha.base || ''}</td>`;
-        tr.innerHTML += `<td class="celula-nome" onclick="${linha.base ? `abrirModalSelecao('${linha.base}')` : ''}">${linha.base ? renderNome(linha.base, 0) : ''}</td>`;
+        tr.innerHTML += `<td class="celula-nome"><div onclick="${linha.base ? `abrirModalSelecao('${linha.base}')` : ''}" style="min-height:20px; width:100%;">${linha.base ? renderNome(linha.base, 0) : ''}</div></td>`;
         
         tr.innerHTML += `<td class="cab-azul" style="font-size:10px;">${linha.sopro || ''}</td>`;
-        tr.innerHTML += `<td class="celula-nome" onclick="${linha.sopro ? `abrirModalSelecao('${linha.sopro.replace('CORDAS: ', '')}')` : ''}">${linha.sopro ? renderNome(linha.sopro.replace('CORDAS: ', ''), 0) : ''}</td>`;
+        tr.innerHTML += `<td class="celula-nome"><div onclick="${linha.sopro ? `abrirModalSelecao('${linha.sopro.replace('CORDAS: ', '')}')` : ''}" style="min-height:20px; width:100%;">${linha.sopro ? renderNome(linha.sopro.replace('CORDAS: ', ''), 0) : ''}</div></td>`;
 
         tbody.appendChild(tr);
     });
@@ -447,7 +448,7 @@ function desenharTabelaExcel() {
     const trReg = document.createElement('tr');
     trReg.innerHTML = `
         <td colspan="9" class="cab-vermelho" style="text-align:right;">REGÊNCIA:</td>
-        <td class="celula-nome" onclick="abrirModalSelecao('Regência')" style="background:#ffcccc;">${renderNome('Regência', 0)}</td>
+        <td class="celula-nome" style="background:#ffcccc;"><div onclick="abrirModalSelecao('Regência')" style="min-height:20px; width:100%;">${renderNome('Regência', 0)}</div></td>
     `;
     tbody.appendChild(trReg);
 }
