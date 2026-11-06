@@ -26,9 +26,9 @@
         </header>
 
         <nav class="menu-abas">
-            <button id="aba-btn-membros" class="aba-ativa" onclick="mostrarAba('membros')">Gestão de Membros</button>
+            <button id="aba-btn-membros" class="aba-ativa" onclick="mostrarAba('membros')">Membros</button>
             <button id="aba-btn-eventos" onclick="mostrarAba('eventos')">Eventos</button>
-            <button onclick="alert('Em breve!')">Montar Estrutura</button>
+            <button id="aba-btn-estrutura" onclick="mostrarAba('estrutura')">Montar Estrutura</button>
         </nav>
 
         <main id="conteudo-membros" class="conteudo">
@@ -121,6 +121,77 @@
         </div>
     </div>
 
+            <!-- CONTEÚDO DE MONTAR ESTRUTURA -->
+        <main id="conteudo-estrutura" class="conteudo escondido">
+            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
+                <label><strong>Selecione o Evento:</strong></label>
+                <select id="select-evento-estrutura" onchange="carregarEstrutura()" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                    <option value="">Carregando eventos...</option>
+                </select>
+                <button onclick="salvarEstrutura()" style="background: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-left: auto;">Salvar Estrutura</button>
+            </div>
+
+            <div class="painel-estrutura">
+                <!-- LADO ESQUERDO: A TABELA VISUAL -->
+                <div class="area-tabela-estrutura">
+                    <div class="tabela-visual">
+                        <!-- Vozes -->
+                        <div class="coluna-estrutura">
+                            <div class="cabecalho-verde">SOPRANO</div>
+                            <div id="lista-soprano" class="campo-alocacao" onclick="abrirSeletor('Soprano')">Clique para adicionar</div>
+                            <div class="cabecalho-verde">CONTRALTO</div>
+                            <div id="lista-contralto" class="campo-alocacao" onclick="abrirSeletor('Contralto')">Clique para adicionar</div>
+                        </div>
+                        <div class="coluna-mic">
+                            <div class="cabecalho-branco">MIC</div>
+                            <div class="campo-mic" contenteditable="true"></div>
+                            <div class="campo-mic" contenteditable="true"></div>
+                        </div>
+                        <div class="coluna-estrutura">
+                            <div class="cabecalho-verde">TENOR</div>
+                            <div id="lista-tenor" class="campo-alocacao" onclick="abrirSeletor('Tenor')">Clique para adicionar</div>
+                            <div class="cabecalho-verde">BAIXO</div>
+                            <div id="lista-baixo" class="campo-alocacao" onclick="abrirSeletor('Baixo')">Clique para adicionar</div>
+                        </div>
+                        
+                        <!-- Base -->
+                        <div class="coluna-estrutura">
+                            <div class="cabecalho-azul">BASE</div>
+                            <div id="lista-teclado" class="campo-alocacao" onclick="abrirSeletor('Teclado')">Teclado (Clique)</div>
+                            <div id="lista-bateria" class="campo-alocacao" onclick="abrirSeletor('Bateria')">Bateria (Clique)</div>
+                            <div id="lista-baixo-eletrico" class="campo-alocacao" onclick="abrirSeletor('Baixo Elétrico')">Baixo (Clique)</div>
+                            <div id="lista-violao" class="campo-alocacao" onclick="abrirSeletor('Violão')">Violão (Clique)</div>
+                            <div id="lista-guitarra" class="campo-alocacao" onclick="abrirSeletor('Guitarra')">Guitarra (Clique)</div>
+                        </div>
+                        
+                        <!-- Sopro e Cordas -->
+                        <div class="coluna-estrutura">
+                            <div class="cabecalho-azul">SOPRO</div>
+                            <div id="lista-sax" class="campo-alocacao" onclick="abrirSeletor('Sax')">Sax (Clique)</div>
+                            <div id="lista-flauta" class="campo-alocacao" onclick="abrirSeletor('Flauta')">Flauta (Clique)</div>
+                            <div class="cabecalho-azul">CORDAS</div>
+                            <div id="lista-violino" class="campo-alocacao" onclick="abrirSeletor('Violino')">Violino (Clique)</div>
+                        </div>
+
+                        <!-- Regência -->
+                        <div class="coluna-estrutura">
+                            <div class="cabecalho-vermelho">REGÊNCIA</div>
+                            <div id="lista-regencia" class="campo-alocacao" onclick="abrirSeletor('Regência')">Clique para adicionar</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LADO DIREITO: O POOL DE DISPONÍVEIS -->
+                <div class="area-disponiveis">
+                    <h3>Disponíveis (Clique para alocar)</h3>
+                    <p style="font-size: 12px; color: #666;">As pessoas somem daqui conforme são alocadas.</p>
+                    <div id="lista-disponiveis" class="pool-lista">
+                        Carregue um evento para ver...
+                    </div>
+                </div>
+            </div>
+        </main>
+    
         <!-- MODAL DE EVENTO -->
     <div id="modal-evento" class="modal-fundo escondido">
         <div class="modal-conteudo">
