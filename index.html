@@ -26,8 +26,8 @@
         </header>
 
         <nav class="menu-abas">
-            <button class="aba-ativa" onclick="mostrarAba('membros')">Gestão de Membros</button>
-            <button onclick="alert('Em breve!')">Eventos</button>
+            <button id="aba-btn-membros" class="aba-ativa" onclick="mostrarAba('membros')">Gestão de Membros</button>
+            <button id="aba-btn-eventos" onclick="mostrarAba('eventos')">Eventos</button>
             <button onclick="alert('Em breve!')">Montar Estrutura</button>
         </nav>
 
@@ -58,6 +58,29 @@
                     </thead>
                     <tbody id="corpo-tabela-membros">
                         <tr><td colspan="5" style="text-align:center;">Carregando dados...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+                <!-- CONTEÚDO DE EVENTOS -->
+        <main id="conteudo-eventos" class="conteudo escondido">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <h3>Eventos Cadastrados</h3>
+                <button class="btn-adicionar" onclick="abrirModalEvento()">+ Criar Novo Evento</button>
+            </div>
+            
+            <div class="tabela-responsiva">
+                <table class="tabela-dados">
+                    <thead>
+                        <tr>
+                            <th>Título</th>
+                            <th>Data</th>
+                            <th>Prazo de Resposta</th>
+                            <th>Link de Disponibilidade</th>
+                        </tr>
+                    </thead>
+                    <tbody id="corpo-tabela-eventos">
+                        <tr><td colspan="4" style="text-align:center;">Carregando...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -98,6 +121,27 @@
         </div>
     </div>
 
+        <!-- MODAL DE EVENTO -->
+    <div id="modal-evento" class="modal-fundo escondido">
+        <div class="modal-conteudo">
+            <h3>Novo Evento</h3>
+            
+            <label>Título do Evento:</label>
+            <input type="text" id="evento-titulo" placeholder="Ex: Vigília Nova Angra">
+
+            <label>Data do Evento:</label>
+            <input type="date" id="evento-data">
+
+            <label>Prazo para Respostas (Data e Hora):</label>
+            <input type="datetime-local" id="evento-prazo">
+
+            <div class="modal-botoes">
+                <button class="btn-cancelar" onclick="fecharModalEvento()">Cancelar</button>
+                <button class="btn-salvar" onclick="salvarEvento()">Salvar</button>
+            </div>
+        </div>
+    </div>
+    
     <!-- Scripts do Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
