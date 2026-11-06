@@ -56,3 +56,84 @@ body { margin: 0; background-color: var(--cinza-fundo); }
 .modal-botoes { display: flex; justify-content: space-between; margin-top: 20px; }
 .btn-cancelar { background: #ccc; color: #333; border: none; padding: 10px; border-radius: 4px; cursor: pointer; width: 45%; }
 .btn-salvar { background: var(--verde-soprano); color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 45%; }
+
+/* --- ESTILOS DA TELA DE ESTRUTURA --- */
+.painel-estrutura {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.area-tabela-estrutura {
+    flex: 1;
+    min-width: 600px;
+    overflow-x: auto;
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.area-disponiveis {
+    width: 300px;
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    border: 2px solid var(--azul-base);
+}
+
+.pool-lista {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.item-disponivel {
+    padding: 10px;
+    background: #f0f0f0;
+    margin-bottom: 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    border-left: 4px solid #4CAF50;
+    font-size: 14px;
+}
+.item-disponivel:hover { background: #e0e0e0; }
+
+/* Tabela Visual (Imitando o Excel) */
+.tabela-visual {
+    display: flex;
+    border: 1px solid #000;
+}
+
+.coluna-estrutura, .coluna-mic {
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #000;
+}
+
+.coluna-mic { width: 40px; }
+
+.cabecalho-verde { background: var(--verde-soprano); font-weight: bold; text-align: center; padding: 5px; border-bottom: 1px solid #000; font-size: 12px; color: #000;}
+.cabecalho-azul { background: var(--azul-base); font-weight: bold; text-align: center; padding: 5px; border-bottom: 1px solid #000; font-size: 12px; color: #000;}
+.cabecalho-vermelho { background: var(--vermelho-regencia); color: white; font-weight: bold; text-align: center; padding: 5px; border-bottom: 1px solid #000; font-size: 12px;}
+.cabecalho-branco { background: #fff; font-weight: bold; text-align: center; padding: 5px; border-bottom: 1px solid #000; font-size: 12px;}
+
+.campo-alocacao {
+    min-height: 30px;
+    padding: 5px;
+    border-bottom: 1px solid #000;
+    font-size: 12px;
+    cursor: pointer;
+    background: #fff;
+}
+.campo-alocacao:hover { background: #f9f9f9; }
+.campo-alocacao .nome-alocado {
+    display: block;
+    border-bottom: 1px solid #ccc;
+    padding: 2px 0;
+    position: relative;
+}
+.campo-alocacao .nome-alocado button {
+    position: absolute; right: 0; top: 2px; border: none; background: none; color: red; cursor: pointer;
+}
+
+.campo-mic { border-bottom: 1px solid #000; height: 30px; text-align: center; outline: none; }
