@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmar Presença - Escalas</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Estilos específicos só para esta página */
+        .container-publico {
+            max-width: 500px;
+            margin: 20px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .container-publico h2 { text-align: center; color: #333; }
+        .info-evento { background: var(--azul-base); padding: 10px; border-radius: 4px; margin-bottom: 20px; text-align: center; }
+        .input-busca { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; margin-bottom: 15px; }
+        .lista-sugestoes { border: 1px solid #ccc; border-radius: 4px; max-height: 200px; overflow-y: auto; display: none; margin-bottom: 15px; }
+        .item-sugestao { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
+        .item-sugestao:hover { background: #f0f0f0; }
+        .grupo-opcoes { display: flex; gap: 10px; margin-top: 15px; }
+        .btn-opcao { flex: 1; padding: 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 16px; }
+        .btn-sim { background: #4CAF50; color: white; }
+        .btn-nao { background: #f44336; color: white; }
+        .btn-opcao.selecionado { border: 3px solid #000; }
+        .campo-obs { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; margin-top: 15px; font-family: inherit; resize: vertical; }
+        .btn-enviar { width: 100%; padding: 15px; background: #333; color: white; border: none; border-radius: 4px; margin-top: 20px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .mensagem-sucesso { text-align: center; padding: 20px; color: #4CAF50; font-weight: bold; font-size: 18px; }
+    </style>
+</head>
+<body style="background-color: var(--cinza-fundo);">
+
+    <div class="container-publico">
+        <h2>Confirmação de Presença</h2>
+        
+        <div id="area-formulario">
+            <div class="info-evento" id="info-evento">
+                <!-- Nome do evento vai aparecer aqui via JS -->
+                Carregando evento...
+            </div>
+
+            <label>Digite seu nome para buscar:</label>
+            <input type="text" id="busca-nome" class="input-busca" placeholder="Ex: Ana Maria" onkeyup="buscarMembro()">
+            
+            <div id="lista-sugestoes" class="lista-sugestoes"></div>
+
+            <!-- Área que só aparece depois que a pessoa se seleciona -->
+            <div id="area-resposta" class="escondido">
+                <h3 style="text-align: center;">Olá, <span id="nome-selecionado" style="color: var(--azul-cordas);"></span>!</h3>
+                <p style="text-align: center;">Você poderá participar deste evento?</p>
+                
+                <div class="grupo-opcoes">
+                    <button class="btn-opcao btn-sim" id="btn-sim" onclick="selecionarOpcao('Disponível')">Sim, estarei lá</button>
+                    <button class="btn-opcao btn-nao" id="btn-nao" onclick="selecionarOpcao('Indisponível')">Não poderei</button>
+                </div>
+
+                <textarea id="obs" class="campo-obs" rows="3" placeholder="Alguma observação? (Ex: Chegarei às 19h)"></textarea>
+
+                <button class="btn-enviar" onclick="enviarResposta()">Enviar Resposta</button>
+            </div>
+        </div>
+
+        <div id="area-sucesso" class="escondido mensagem-sucesso">
+            ✅ Resposta registrada com sucesso!<br><br>
+            Obrigado por ajudar a montar a escala!
+        </div>
+    </div>
+
+    <!-- Scripts do Firebase (o mesmo do painel) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    
+    <!-- Lógica específica do link público -->
+    <script>
+        // COLE SUAS CHAVES AQUI NOVAMENTE (O site público também precisa conectar)
+        const firebaseConfig = {
+              apiKey: "AIzaSyBctoENUqGBMTBVIuAEOr-zyMCK4-fLi5U",
+              authDomain: "louvor-angra-dos-reis.firebaseapp.com",
+              projectId: "louvor-angra-dos-reis",
+              storageBucket: "louvor-angra-dos-reis.firebasestorage.app",
+              messagingSenderId: "613690121412",
+              appId: "1:613690121412:web:be62972614043421723d91"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Variáveis de controle
+        let membroSelecionadoId = null;
+        let membroSelecionadoNome = "";
+        let opcaoSelecionada = "";
+        let idEventoAtual = "";
+
+        // Pega o ID do evento na URL (ex: disponibilidade.html?evento=12345)
+        const urlParams = new URLSearchParams(window.location.search);
+        idEventoAtual = urlParams.get('evento');
+
+        if (!idEventoAtual) {
+            document.getElementById('info-evento').innerText = "Erro: Evento não encontrado no link.";
+            document.getElementById('area-resposta').classList.add('escondido');
+            document.getElementById('busca-nome').disabled = true;
+        } else {
+            // Busca as informações do evento no banco para mostrar o nome
+            db.collection('eventos').doc(idEventoAtual).get().then((doc) => {
+                if (doc.exists) {
+                    const evento = doc.data();
+                    document.getElementById('info-evento').innerHTML = `<strong>${evento.titulo}</strong><br>Data: ${evento.data}`;
+                    
+                    // Verifica se o prazo já expirou
+                    const hoje = new Date();
+                    const prazo = new Date(evento.prazo);
+                    if (hoje > prazo) {
+                        document.getElementById('info-evento').innerHTML += `<br><span style="color:red;">(Prazo de resposta encerrado)</span>`;
+                        document.getElementById('busca-nome').disabled = true;
+                        document.getElementById('busca-nome').placeholder = "Prazo encerrado";
+                    }
+                } else {
+                    document.getElementById('info-evento').innerText = "Erro: Evento inválido.";
+                }
+            });
+        }
+
+        // Função de busca de membros (Autocomplete simples)
+        function buscarMembro() {
+            const termo = document.getElementById('busca-nome').value.toLowerCase();
+            const lista = document.getElementById('lista-sugestoes');
+            
+            if (termo.length < 3) {
+                lista.style.display = 'none';
+                return;
+            }
+
+            lista.innerHTML = "";
+            // Busca no Firestore (traz os primeiros 50 para não pesar no celular)
+            db.collection('membros').get().then((snapshot) => {
+                let encontrados = 0;
+                snapshot.forEach((doc) => {
+                    const membro = doc.data();
+                    if (membro.nome.toLowerCase().includes(termo)) {
+                        encontrados++;
+                        const div = document.createElement('div');
+                        div.className = 'item-sugestao';
+                        div.innerText = membro.nome + ` (${membro.grupoLocal})`;
+                        div.onclick = () => selecionarMembro(doc.id, membro.nome);
+                        lista.appendChild(div);
+                    }
+                });
+
+                if (encontrados > 0) {
+                    lista.style.display = 'block';
+                } else {
+                    lista.style.display = 'none';
+                    // Se não achar, avisa
+                    const div = document.createElement('div');
+                    div.className = 'item-sugestao';
+                    div.style.color = "red";
+                    div.innerText = "Nome não encontrado. Fale com o líder.";
+                    lista.appendChild(div);
+                    lista.style.display = 'block';
+                }
+            });
+        }
+
+        function selecionarMembro(id, nome) {
+            membroSelecionadoId = id;
+            membroSelecionadoNome = nome;
+            document.getElementById('nome-selecionado').innerText = nome;
+            document.getElementById('busca-nome').value = nome;
+            document.getElementById('lista-sugestoes').style.display = 'none';
+            document.getElementById('area-resposta').classList.remove('escondido');
+        }
+
+        function selecionarOpcao(opcao) {
+            opcaoSelecionada = opcao;
+            // Reseta os botões
+            document.getElementById('btn-sim').classList.remove('selecionado');
+            document.getElementById('btn-nao').classList.remove('selecionado');
+            
+            if (opcao === 'Disponível') {
+                document.getElementById('btn-sim').classList.add('selecionado');
+            } else {
+                document.getElementById('btn-nao').classList.add('selecionado');
+            }
+        }
+
+        function enviarResposta() {
+            if (!opcaoSelecionada) {
+                alert("Por favor, escolha 'Sim' ou 'Não' antes de enviar.");
+                return;
+            }
+
+            const observacao = document.getElementById('obs').value;
+
+            // Salva na coleção 'disponibilidades' no Firestore
+            db.collection('disponibilidades').add({
+                idEvento: idEventoAtual,
+                idMembro: membroSelecionadoId,
+                nomeMembro: membroSelecionadoNome,
+                status: opcaoSelecionada,
+                observacao: observacao,
+                dataResposta: new Date()
+            }).then(() => {
+                // Esconde o formulário e mostra o sucesso
+                document.getElementById('area-formulario').classList.add('escondido');
+                document.getElementById('area-sucesso').classList.remove('escondido');
+            }).catch((error) => {
+                console.error("Erro ao salvar:", error);
+                alert("Erro ao enviar a resposta. Tente novamente.");
+            });
+        }
+    </script>
+</body>
+</html>
