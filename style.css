@@ -138,3 +138,53 @@ body { margin: 0; background-color: var(--cinza-fundo); }
 
 .campo-mic { border-bottom: 1px solid #000; height: 30px; text-align: center; outline: none; }
 
+/* --- NOVA TABELA ESTILO EXCEL --- */
+.tabela-visual-excel {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    table-layout: fixed;
+}
+
+.tabela-visual-excel th, .tabela-visual-excel td {
+    border: 1px solid #000;
+    padding: 4px;
+    font-size: 12px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.tabela-visual-excel .cab-verde { background: var(--verde-soprano); color: #000; }
+.tabela-visual-excel .cab-azul { background: var(--azul-base); color: #000; }
+.tabela-visual-excel .cab-vermelho { background: var(--vermelho-regencia); color: #fff; }
+.tabela-visual-excel .cab-mic { background: #fff; }
+
+.celula-nome {
+    text-align: left;
+    padding-left: 5px !important;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+.celula-nome:hover { background: #f0f8ff; }
+
+.celula-mic {
+    font-weight: bold;
+    background: #fafafa;
+}
+
+.btn-remover-nome {
+    color: red;
+    cursor: pointer;
+    font-weight: bold;
+    float: right;
+    padding: 0 5px;
+    border: none;
+    background: transparent;
+}
+
+/* Fundo para separar as linhas base */
+.bg-base { background-color: #eef3f8; }
+.bg-cordas { background-color: #e0ebf5; }
