@@ -387,7 +387,6 @@ function desenharTabelaExcel() {
     const tbody = document.getElementById('corpo-tabela-excel');
     tbody.innerHTML = "";
 
-    // Estrutura de colunas para desenhar linha por linha (igual à imagem)
     const configLinhas = [
         { sop: 0, ten: 0, base: 'Teclado', sopro: 'Clarinete' },
         { sop: 1, ten: 1, base: 'Bateria', sopro: 'Flauta' },
@@ -399,47 +398,47 @@ function desenharTabelaExcel() {
         { sop: 7, ten: 7, base: null, sopro: null }
     ];
 
-    // Variável auxiliar para pegar o nome alocado pela posição (ex: Soprano 0)
-    const getNome = (func, index) => {
+    // Variável auxiliar que agora cria o botão de X (lixeira) no nome
+    const renderNome = (func, index) => {
         if (!estruturaAtual[func] || !estruturaAtual[func][index]) return "";
-        return estruturaAtual[func][index].nome;
+        const p = estruturaAtual[func][index];
+        return `<span style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>${p.nome}</span>
+                    <button onclick="removerAlocado('${func}', '${p.id}'); event.stopPropagation();" style="background:none; border:none; color:red; cursor:pointer; font-weight:bold; padding:0 5px;">x</button>
+                </span>`;
     };
-    const getId = (func, index) => {
-        if (!estruturaAtual[func] || !estruturaAtual[func][index]) return "";
-        return estruturaAtual[func][index].id;
-    };
+
     const getMic = (func, index) => {
          return estruturaAtual['Mic_' + func] && estruturaAtual['Mic_' + func][index] ? estruturaAtual['Mic_' + func][index].nome : "";
-    }
+    };
 
-    // Como a tabela é complexa, vamos montar linha por linha para o topo (Vozes e Base/Sopro)
     configLinhas.forEach((linha, i) => {
         const tr = document.createElement('tr');
         
         // -- BLOCO SOPRANO / CONTRALTO --
         if (i < 4) {
             tr.innerHTML += `<td class="cab-verde" style="font-size:10px;">${i===0 ? 'SOPRANO' : (i===1 ? 'CONTRALTO' : '')}</td>`;
-            tr.innerHTML += `<td class="celula-nome" onclick="abrirModalSelecao('${i===0||i===1?'Soprano':'Contralto'}')">${getNome(i < 2 ? 'Soprano' : 'Contralto', i % 2)}</td>`;
-            tr.innerHTML += `<td class="celula-mic" contenteditable="true" onblur="salvarMic(this.innerText, 'Soprano', ${i%2})">${getMic(i < 2 ? 'Soprano' : 'Contralto', i % 2)}</td>`;
+            tr.innerHTML += `<td class="celula-nome" onclick="abrirModalSelecao('${i < 2 ? 'Soprano' : 'Contralto'}')">${renderNome(i < 2 ? 'Soprano' : 'Contralto', i % 2)}</td>`;
+            tr.innerHTML += `<td class="celula-mic" contenteditable="true" onblur="salvarMic(this.innerText, '${i < 2 ? 'Soprano' : 'Contralto'}', ${i%2})">${getMic(i < 2 ? 'Soprano' : 'Contralto', i % 2)}</td>`;
         } else {
-            tr.innerHTML += `<td></td><td></td><td></td>`; // Colunas vazias se acabar
+            tr.innerHTML += `<td></td><td></td><td></td>`;
         }
 
         // -- BLOCO TENOR / BAIXO --
         if (i < 4) {
             tr.innerHTML += `<td class="cab-verde" style="font-size:10px;">${i===0 ? 'TENOR' : (i===1 ? 'BAIXO' : '')}</td>`;
-            tr.innerHTML += `<td class="celula-nome" onclick="abrirModalSelecao('${i===0||i===1?'Tenor':'Baixo'}')">${getNome(i < 2 ? 'Tenor' : 'Baixo', i % 2)}</td>`;
-            tr.innerHTML += `<td class="celula-mic" contenteditable="true" onblur="salvarMic(this.innerText, 'Tenor', ${i%2})">${getMic(i < 2 ? 'Tenor' : 'Baixo', i % 2)}</td>`;
+            tr.innerHTML += `<td class="celula-nome" onclick="abrirModalSelecao('${i < 2 ? 'Tenor' : 'Baixo'}')">${renderNome(i < 2 ? 'Tenor' : 'Baixo', i % 2)}</td>`;
+            tr.innerHTML += `<td class="celula-mic" contenteditable="true" onblur="salvarMic(this.innerText, '${i < 2 ? 'Tenor' : 'Baixo'}', ${i%2})">${getMic(i < 2 ? 'Tenor' : 'Baixo', i % 2)}</td>`;
         } else {
             tr.innerHTML += `<td></td><td></td><td></td>`;
         }
 
         // -- BLOCO BASE / SOPRO --
         tr.innerHTML += `<td class="cab-azul" style="font-size:10px;">${linha.base || ''}</td>`;
-        tr.innerHTML += `<td class="celula-nome" onclick="${linha.base ? `abrirModalSelecao('${linha.base}')` : ''}">${linha.base ? getNome(linha.base, 0) : ''}</td>`;
+        tr.innerHTML += `<td class="celula-nome" onclick="${linha.base ? `abrirModalSelecao('${linha.base}')` : ''}">${linha.base ? renderNome(linha.base, 0) : ''}</td>`;
         
         tr.innerHTML += `<td class="cab-azul" style="font-size:10px;">${linha.sopro || ''}</td>`;
-        tr.innerHTML += `<td class="celula-nome" onclick="${linha.sopro ? `abrirModalSelecao('${linha.sopro.replace('CORDAS: ', '')}')` : ''}">${linha.sopro ? getNome(linha.sopro.replace('CORDAS: ', ''), 0) : ''}</td>`;
+        tr.innerHTML += `<td class="celula-nome" onclick="${linha.sopro ? `abrirModalSelecao('${linha.sopro.replace('CORDAS: ', '')}')` : ''}">${linha.sopro ? renderNome(linha.sopro.replace('CORDAS: ', ''), 0) : ''}</td>`;
 
         tbody.appendChild(tr);
     });
@@ -448,7 +447,7 @@ function desenharTabelaExcel() {
     const trReg = document.createElement('tr');
     trReg.innerHTML = `
         <td colspan="9" class="cab-vermelho" style="text-align:right;">REGÊNCIA:</td>
-        <td class="celula-nome" onclick="abrirModalSelecao('Regência')" style="background:#ffcccc;">${getNome('Regência', 0)}</td>
+        <td class="celula-nome" onclick="abrirModalSelecao('Regência')" style="background:#ffcccc;">${renderNome('Regência', 0)}</td>
     `;
     tbody.appendChild(trReg);
 }
@@ -463,14 +462,49 @@ function desenharPoolDisponiveis() {
     } else {
         restantes.forEach(p => {
             const obsIcon = p.obs ? `<br><small style="color:#d9534f;">⚠️ ${p.obs}</small>` : '';
+            // Adicionamos o clique para abrir as opções de alocação direto no pool
             pool.innerHTML += `
-                <div class="item-disponivel">
+                <div class="item-disponivel" onclick="alocarPeloPool('${p.id}')">
                     <strong>${p.nome}</strong><br>
                     <small>${p.funcoes.join(', ')}</small>
                     ${obsIcon}
                 </div>`;
         });
     }
+}
+
+// Nova função para alocar clicando direto na lista de disponíveis
+function alocarPeloPool(id) {
+    const pessoa = disponiveisEvento.find(p => p.id === id);
+    if(!pessoa) return;
+    
+    if (pessoa.funcoes.length === 1) {
+        // Se a pessoa só tem 1 função, aloca direto
+        alocarPessoa(pessoa.funcoes[0], pessoa);
+    } else {
+        // Se tem mais de uma função, pergunta qual usar
+        let msg = `Em qual função você quer alocar ${pessoa.nome}?\n\n`;
+        pessoa.funcoes.forEach((f, i) => { msg += `${i+1}. ${f}\n`; });
+        
+        const escolha = prompt(msg);
+        if(escolha) {
+            const func = pessoa.funcoes[parseInt(escolha)-1];
+            if(func) alocarPessoa(func, pessoa);
+        }
+    }
+}
+
+// Função auxiliar para alocar (já que o modal agora é múltiplo)
+function alocarPessoa(funcao, pessoa) {
+    if (!estruturaAtual[funcao]) estruturaAtual[funcao] = [];
+    if (funcao === 'Regência' && estruturaAtual[funcao].length > 0) {
+        alert("Já existe um regente alocado.");
+        return;
+    }
+    estruturaAtual[funcao].push({ id: pessoa.id, nome: pessoa.nome });
+    pessoasAlocadas.push(pessoa.id);
+    desenharTabelaExcel();
+    desenharPoolDisponiveis();
 }
 
 // --- SISTEMA DE MÚLTIPLA SELEÇÃO ---
