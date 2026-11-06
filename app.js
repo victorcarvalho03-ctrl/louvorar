@@ -17,6 +17,9 @@ let idMembroEditando = null;
 let meuNivelAcesso = "visitante";
 let meuGrupoLocal = "nenhum";
 let abaMembrosAtual = "locais"; // Pode ser 'locais' ou 'area'
+let estruturaAtual = {}; // Guarda o que está sendo montado
+let pessoasAlocadas = []; // Guarda os IDs de quem já foi chamado
+let disponiveisEvento = []; // Todos que responderam "Sim"
 
 // 2. LÓGICA DE LOGIN E PERMISSÕES
 function fazerLogin() {
@@ -203,20 +206,26 @@ function excluirMembro(id, nome) {
 }
 // 6. CONTROLE DE ABAS DO MENU PRINCIPAL
 function mostrarAba(aba) {
-    // Esconde todas as áreas e tira a cor de ativa dos botões
     document.getElementById('conteudo-membros').classList.add('escondido');
     document.getElementById('conteudo-eventos').classList.add('escondido');
+    document.getElementById('conteudo-estrutura').classList.add('escondido');
+    
     document.getElementById('aba-btn-membros').classList.remove('aba-ativa');
     document.getElementById('aba-btn-eventos').classList.remove('aba-ativa');
+    document.getElementById('aba-btn-estrutura').classList.remove('aba-ativa');
 
     if (aba === 'membros') {
         document.getElementById('conteudo-membros').classList.remove('escondido');
         document.getElementById('aba-btn-membros').classList.add('aba-ativa');
-        carregarMembros(); // Atualiza a lista
+        carregarMembros();
     } else if (aba === 'eventos') {
         document.getElementById('conteudo-eventos').classList.remove('escondido');
         document.getElementById('aba-btn-eventos').classList.add('aba-ativa');
-        carregarEventos(); // Atualiza a lista de eventos
+        carregarEventos();
+    } else if (aba === 'estrutura') {
+        document.getElementById('conteudo-estrutura').classList.remove('escondido');
+        document.getElementById('aba-btn-estrutura').classList.add('aba-ativa');
+        carregarSelectEventos();
     }
 }
 
@@ -314,4 +323,181 @@ function copiarLink(texto) {
         prompt("Não foi possível copiar automaticamente. Copie o link abaixo:", texto);
     }
     document.body.removeChild(textArea);
+}
+
+// --- LÓGICA DA ESTRUTURA ---
+function carregarSelectEventos() {
+    const select = document.getElementById('select-evento-estrutura');
+    select.innerHTML = "<option value=''>Selecione...</option>";
+    
+    db.collection('eventos').orderBy('data', 'desc').get().then(snapshot => {
+        snapshot.forEach(doc => {
+            const ev = doc.data();
+            select.innerHTML += `<option value="${doc.id}">${ev.titulo} (${ev.data.split('-').reverse().join('/')})</option>`;
+        });
+    });
+}
+
+function carregarEstrutura() {
+    const idEvento = document.getElementById('select-evento-estrutura').value;
+    if (!idEvento) return;
+
+    // Limpa a tela
+    estruturaAtual = {};
+    pessoasAlocadas = [];
+    disponiveisEvento = [];
+    
+    const campos = ['Soprano', 'Contralto', 'Tenor', 'Baixo', 'Teclado', 'Bateria', 'Baixo Elétrico', 'Violão', 'Guitarra', 'Sax', 'Flauta', 'Violino', 'Regência'];
+    campos.forEach(c => {
+        const el = document.getElementById('lista-' + c.toLowerCase().replace(' ', '-').replace('á', 'a').replace('ê', 'e'));
+        if(el) {
+            el.innerHTML = (c === 'Teclado' || c === 'Bateria' || c === 'Baixo Elétrico' || c === 'Violão' || c === 'Guitarra' || c === 'Sax' || c === 'Flauta' || c === 'Violino') ? c + ' (Clique)' : 'Clique para adicionar';
+        }
+    });
+    document.getElementById('lista-disponiveis').innerHTML = "Buscando disponíveis...";
+
+    // 1. Busca as respostas
+    db.collection('disponibilidades').where('idEvento', '==', idEvento).where('status', '==', 'Disponível').get()
+    .then(snapshot => {
+        // 2. Busca os dados completos (funções) de cada pessoa
+        let promises = [];
+        snapshot.forEach(docResp => {
+            const resp = docResp.data();
+            promises.push(db.collection('membros').doc(resp.idMembro).get().then(docMembro => {
+                if (docMembro.exists) {
+                    const m = docMembro.data();
+                    disponiveisEvento.push({
+                        id: docMembro.id,
+                        nome: m.nome,
+                        funcoes: m.funcoes || [],
+                        obs: resp.observacao
+                    });
+                }
+            }));
+        });
+        return Promise.all(promises);
+    }).then(() => {
+        // 3. Tenta buscar uma estrutura já salva para este evento
+        return db.collection('estruturas').doc(idEvento).get();
+    }).then(docEstrutura => {
+        if (docEstrutura.exists) {
+            estruturaAtual = docEstrutura.data();
+            // Recria a lista de alocados
+            for (let func in estruturaAtual) {
+                if (estruturaAtual[func]) {
+                    estruturaAtual[func].forEach(p => {
+                        pessoasAlocadas.push(p.id);
+                    });
+                }
+            }
+        }
+        renderizarTela();
+    }).catch(err => {
+        console.error(err);
+        document.getElementById('lista-disponiveis').innerHTML = "Erro ao carregar.";
+    });
+}
+
+function renderizarTela() {
+    const campos = ['Soprano', 'Contralto', 'Tenor', 'Baixo', 'Teclado', 'Bateria', 'Baixo Elétrico', 'Violão', 'Guitarra', 'Sax', 'Flauta', 'Violino', 'Regência'];
+    
+    // Desenha a tabela
+    campos.forEach(func => {
+        const el = document.getElementById('lista-' + func.toLowerCase().replace(' ', '-').replace('á', 'a').replace('ê', 'e'));
+        if(!el) return;
+        
+        const alocados = estruturaAtual[func] || [];
+        
+        if (alocados.length === 0) {
+            el.innerHTML = (['Teclado','Bateria','Baixo Elétrico','Violão','Guitarra','Sax','Flauta','Violino'].includes(func)) ? func + ' (Clique)' : 'Clique para adicionar';
+        } else {
+            el.innerHTML = "";
+            alocados.forEach(p => {
+                el.innerHTML += `<span class="nome-alocado">${p.nome} <button onclick="removerAlocado('${func}', '${p.id}'); event.stopPropagation();">x</button></span>`;
+            });
+        }
+    });
+
+    // Desenha o Pool de Disponíveis (Filtrado)
+    const pool = document.getElementById('lista-disponiveis');
+    const restantes = disponiveisEvento.filter(p => !pessoasAlocadas.includes(p.id));
+    
+    pool.innerHTML = "";
+    if (restantes.length === 0) {
+        pool.innerHTML = "Todos os disponíveis já foram alocados!";
+    } else {
+        restantes.forEach(p => {
+            const obsIcon = p.obs ? ` ⚠️ (${p.obs})` : '';
+            pool.innerHTML += `<div class="item-disponivel" onclick="abrirSeletorManual('${p.id}')"><strong>${p.nome}</strong><br><small>${p.funcoes.join(', ')}</small>${obsIcon}</div>`;
+        });
+    }
+}
+
+function abrirSeletor(funcao) {
+    // Pega quem ainda não foi alocado E tem essa função
+    const filtrados = disponiveisEvento.filter(p => 
+        !pessoasAlocadas.includes(p.id) && p.funcoes.includes(funcao)
+    );
+
+    if (filtrados.length === 0) {
+        alert(`Não há ninguém disponível para ${funcao} que ainda não tenha sido alocado.`);
+        return;
+    }
+    
+    // Como o prompt nativo é feio, vamos usar um simples prompt para selecionar
+    let msg = `Selecione o número para alocar em ${funcao}:\n\n`;
+    filtrados.forEach((p, index) => {
+        msg += `${index + 1}. ${p.nome}\n`;
+    });
+
+    const escolha = prompt(msg);
+    if (escolha) {
+        const idx = parseInt(escolha) - 1;
+        if (filtrados[idx]) {
+            alocarPessoa(funcao, filtrados[idx]);
+        }
+    }
+}
+
+function abrirSeletorManual(idMembro) {
+    const pessoa = disponiveisEvento.find(p => p.id === idMembro);
+    if(!pessoa) return;
+    
+    let msg = `Em qual função você quer alocar ${pessoa.nome}?\n\n`;
+    pessoa.funcoes.forEach((f, i) => { msg += `${i+1}. ${f}\n`; });
+    
+    const escolha = prompt(msg);
+    if(escolha) {
+        const func = pessoa.funcoes[parseInt(escolha)-1];
+        if(func) alocarPessoa(func, pessoa);
+    }
+}
+
+function alocarPessoa(funcao, pessoa) {
+    if (!estruturaAtual[funcao]) estruturaAtual[funcao] = [];
+    
+    // Verifica se não é a Regência (que só aceita 1)
+    if (funcao === 'Regência' && estruturaAtual[funcao].length > 0) {
+        alert("Já existe um regente alocado.");
+        return;
+    }
+
+    estruturaAtual[funcao].push({ id: pessoa.id, nome: pessoa.nome });
+    pessoasAlocadas.push(pessoa.id);
+    renderizarTela();
+}
+
+function removerAlocado(funcao, idPessoa) {
+    estruturaAtual[funcao] = estruturaAtual[funcao].filter(p => p.id !== idPessoa);
+    pessoasAlocadas = pessoasAlocadas.filter(id => id !== idPessoa);
+    renderizarTela();
+}
+
+function salvarEstrutura() {
+    const idEvento = document.getElementById('select-evento-estrutura').value;
+    if (!idEvento) return;
+
+    db.collection('estruturas').doc(idEvento).set(estruturaAtual).then(() => {
+        alert("Estrutura salva com sucesso!");
+    }).catch(err => console.error(err));
 }
